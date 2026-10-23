@@ -6,14 +6,14 @@ const KEY = "watchy-theme";
 const EVENT = "watchy-theme";
 
 function read(): Theme {
-  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+  return document.documentElement.dataset.theme === "dark" ? "dark" : "light";
 }
 
 export function useTheme(): Theme {
   return useSyncExternalStore(
     (cb) => { window.addEventListener(EVENT, cb); return () => window.removeEventListener(EVENT, cb); },
     read,
-    () => "dark",
+    () => "light",
   );
 }
 
@@ -24,5 +24,7 @@ export function setTheme(t: Theme) {
   window.dispatchEvent(new Event(EVENT));
 }
 
-// Runs before first paint (inlined in <head>) so there is no flash.
-export const THEME_INIT = `(function(){var t="dark";try{var s=localStorage.getItem("${KEY}");if(s==="light"||s==="dark")t=s}catch(e){}document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#ffffff":"#000000")})()`;
+// Stored only in this browser (localStorage), never tied to the account.
+// Light is the default when nothing is stored. Runs before first paint
+// (inlined in <head>) so there is no flash.
+export const THEME_INIT = `(function(){var t="light";try{var s=localStorage.getItem("${KEY}");if(s==="light"||s==="dark")t=s}catch(e){}document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#ffffff":"#000000")})()`;
