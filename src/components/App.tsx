@@ -8,7 +8,8 @@ import { Player } from "./Player";
 import { Schedule } from "./Schedule";
 import { Stats } from "./Stats";
 import { matchupImage } from "@/lib/matchup";
-import { IconBell, IconGuide, IconSchedule, IconStats, IconWifi } from "./icons";
+import { ThemeToggle } from "./ThemeToggle";
+import { IconGuide, IconSchedule, IconStats, IconWifi } from "./icons";
 
 type View = "watch" | "schedule" | "guide" | "stats";
 type GuideData = { now: number; programmes: Programme[] };
@@ -67,7 +68,7 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
       <div className="shell">
         <div className="logo"><span>watchy</span></div>
         <div className="bar">
-          <div className="tab"><button className="icon-btn" aria-label="Notifications"><IconBell /></button></div>
+          <div className="tab"><ThemeToggle /></div>
         </div>
 
         <aside className="side">
@@ -89,7 +90,7 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
                 <button key={c.id} className="provider" aria-current={isCur && view === "watch"} onClick={() => { setChannelId(c.id); setView("watch"); }}>
                   <Avatar label={c.provider} />
                   <span className="name">{c.provider}</span>
-                  {isCur && playing ? <span style={{ color: "var(--accent)" }} title="Playing"><IconWifi /></span> : <span className="dot" title="Live" />}
+                  {isCur && playing ? <span style={{ color: "var(--accent-text)" }} title="Playing"><IconWifi /></span> : <span className="dot" title="Live" />}
                 </button>
               );
             })}

@@ -29,7 +29,7 @@ export type Game = {
   ot?: "OT" | "SO";
   period?: number;
 };
-type Side = { a: string; n: string; logo: string; s?: number };
+type Side = { a: string; n: string; logo: string; light: string; s?: number };
 
 type RawSide = { abbrev: string; commonName?: { default: string }; placeName?: { default: string }; darkLogo?: string; logo?: string; score?: number };
 type RawGame = {
@@ -44,6 +44,7 @@ const side = (s: RawSide): Side => ({
   a: s.abbrev,
   n: s.commonName?.default ?? s.abbrev,
   logo: s.darkLogo ?? s.logo ?? "",
+  light: s.logo ?? s.darkLogo ?? "",
   s: s.score,
 });
 
@@ -113,6 +114,7 @@ export type StatRow = {
   sub: string; // team abbrev / position
   team: string;
   logo?: string;
+  logoLight?: string;
   headshot?: string;
   main: string;
   cols: string[];
@@ -199,6 +201,7 @@ export async function getStats(q: StatsQuery): Promise<StatTable | null> {
       sub: r.player ? r.player.position : t.abbrev,
       team: t.abbrev,
       logo: t.teamLogo?.dark ?? t.teamLogo?.light,
+      logoLight: t.teamLogo?.light ?? t.teamLogo?.dark,
       headshot: r.player?.headshot,
       main,
       cols,

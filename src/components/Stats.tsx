@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import type { StatTable } from "@/lib/nhl";
+import { useTheme } from "@/lib/theme";
 
 type Scope = "team" | "skater" | "defence";
 type Cat = "speed" | "shot-speed" | "distance" | "zone-time" | "shot-location";
@@ -30,6 +31,7 @@ export function Stats() {
   const [table, setTable] = useState<StatTable | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "error">("loading");
   const cache = useRef(new Map<string, StatTable | null>());
+  const theme = useTheme();
 
   // Shot location isn't offered for defencemen by the API.
   const effCat: Cat = scope === "defence" && cat === "shot-location" ? "speed" : cat;
@@ -85,7 +87,7 @@ export function Stats() {
                   <td className="rank">{r.rank}</td>
                   <td>
                     <div className="who">
-                      {r.headshot ? <img className="mug" src={r.headshot} alt="" width={36} height={36} loading="lazy" decoding="async" /> : r.logo ? <img className="tlogo" src={r.logo} alt="" width={30} height={30} loading="lazy" decoding="async" /> : <span className="mug" />}
+                      {r.headshot ? <img className="mug" src={r.headshot} alt="" width={36} height={36} loading="lazy" decoding="async" /> : r.logo ? <img className="tlogo" src={theme === "light" ? r.logoLight ?? r.logo : r.logo} alt="" width={30} height={30} loading="lazy" decoding="async" /> : <span className="mug" />}
                       <div><div className="nm">{r.name}</div><div className="meta">{scope === "team" ? "" : `${r.sub} · ${r.team}`}</div></div>
                     </div>
                   </td>

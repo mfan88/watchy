@@ -1,0 +1,28 @@
+"use client";
+import { useSyncExternalStore } from "react";
+
+export type Theme = "dark" | "light";
+const KEY = "watchy-theme";
+const EVENT = "watchy-theme";
+
+function read(): Theme {
+  return document.documentElement.dataset.theme === "light" ? "light" : "dark";
+}
+
+export function useTheme(): Theme {
+  return useSyncExternalStore(
+    (cb) => { window.addEventListener(EVENT, cb); return () => window.removeEventListener(EVENT, cb); },
+    read,
+    () => "dark",
+  );
+}
+
+export function setTheme(t: Theme) {
+  document.documentElement.dataset.theme = t;
+  try { localStorage.setItem(KEY, t); } catch {}
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t === "light" ? "#ffffff" : "#000000");
+  window.dispatchEvent(new Event(EVENT));
+}
+
+// Runs before first paint (inlined in <head>) so there is no flash.
+export const THEME_INIT = `(function(){var t="dark";try{var s=localStorage.getItem("${KEY}");if(s==="light"||s==="dark")t=s}catch(e){}document.documentElement.dataset.theme=t;var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute("content",t==="light"?"#ffffff":"#000000")})()`;

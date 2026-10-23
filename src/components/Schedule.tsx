@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Game } from "@/lib/nhl";
+import { useTheme } from "@/lib/theme";
 
 type View = "day" | "week" | "month" | "oilers";
 const VIEWS: [View, string][] = [["day", "Today"], ["week", "Week"], ["month", "Month"], ["oilers", "Oilers only"]];
@@ -25,9 +26,10 @@ function status(g: Game) {
 }
 
 function Team({ s, win, show }: { s: Game["away"]; win: boolean; show: boolean }) {
+  const theme = useTheme();
   return (
     <div className={win ? "tm win" : "tm"}>
-      <img src={s.logo} alt="" width={28} height={28} loading="lazy" decoding="async" />
+      <img src={theme === "light" ? s.light : s.logo} alt="" width={28} height={28} loading="lazy" decoding="async" />
       <span className="nm">{s.n}</span>
       <span className="sc">{show ? s.s ?? 0 : ""}</span>
     </div>
@@ -143,6 +145,7 @@ function DayList({ games, empty }: { games: Game[]; empty: string }) {
 }
 
 function Month({ anchor, today, picked, onPick, byDay, oilers }: { anchor: string; today: string; picked: string; onPick: (d: string) => void; byDay: Map<string, Game[]>; oilers: boolean }) {
+  const theme = useTheme();
   const first = parse(anchor);
   const lead = first.getDay(); // Sunday-first
   const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
@@ -160,7 +163,7 @@ function Month({ anchor, today, picked, onPick, byDay, oilers }: { anchor: strin
             <span className="dn">{Number(d.slice(8))}</span>
             {oilers && g ? (
               <span className="opp">
-                <img src={(g.home.a === "EDM" ? g.away : g.home).logo} alt="" width={22} height={22} loading="lazy" decoding="async" />
+                <img src={theme === "light" ? (g.home.a === "EDM" ? g.away : g.home).light : (g.home.a === "EDM" ? g.away : g.home).logo} alt="" width={22} height={22} loading="lazy" decoding="async" />
                 <span className="vs">{g.home.a === "EDM" ? "vs" : "@"} {(g.home.a === "EDM" ? g.away : g.home).a}</span>
                 <span className={done(g) ? (resultFor(g).won ? "res w" : "res l") : "res"}>{done(g) ? resultFor(g).text : live(g) ? "LIVE" : fmtTime.format(g.t)}</span>
               </span>
