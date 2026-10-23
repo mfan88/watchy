@@ -1,0 +1,19 @@
+#EXTM3U
+#EXTINF:-1 tvg-id="htv-8f10348a47" tvg-chno="1" tvg-name="CAR @ EDM · SN+" group-title="Live now",CAR @ EDM · SN+
+https://tv.zuxi.me/TESTSECRET/ch_8f10348a47/index.m3u8
+#EXTINF:-1 tvg-id="htv-39b7291724" tvg-chno="2" tvg-name="CAR @ EDM · ESPN+" group-title="Live now",CAR @ EDM · ESPN+
+https://tv.zuxi.me/TESTSECRET/ch_39b7291724/index.m3u8
+#EXTINF:-1 tvg-id="htv-501784e13d" tvg-chno="3" tvg-name="CAR @ EDM · SN West" group-title="Live now",CAR @ EDM · SN West
+https://tv.zuxi.me/TESTSECRET/ch_501784e13d/index.m3u8
+#EXTINF:-1 tvg-id="htv-17219f6f8b" tvg-chno="4" tvg-name="CAR @ EDM · Viaplay 3 Urheilu" group-title="Live now",CAR @ EDM · Viaplay 3 Urheilu
+https://tv.zuxi.me/TESTSECRET/ch_17219f6f8b/index.m3u8
+#EXTINF:-1 tvg-id="htv-27a62a7600" tvg-chno="5" tvg-name="CAR @ EDM · ESPN+ (away feed)" group-title="Live now",CAR @ EDM · ESPN+ (away feed)
+https://tv.zuxi.me/TESTSECRET/ch_27a62a7600/index.m3u8
+#EXTINF:-1 tvg-id="htv-6dcaf0ae1b" tvg-chno="6" tvg-name="CAR @ EDM · TVA Sports (french)" group-title="Live now",CAR @ EDM · TVA Sports (french)
+https://tv.zuxi.me/TESTSECRET/ch_6dcaf0ae1b/index.m3u8
+#EXTINF:-1 tvg-id="htv-e2c95771ea" tvg-chno="7" tvg-name="CAR @ EDM · beIN Sports Max 5 (french)" group-title="Live now",CAR @ EDM · beIN Sports Max 5 (french)
+https://tv.zuxi.me/TESTSECRET/ch_e2c95771ea/index.m3u8
+#EXTINF:-1 tvg-id="htv-6a45d1e193" tvg-chno="8" tvg-name="CAR @ EDM" group-title="Live now",CAR @ EDM
+https://tv.zuxi.me/TESTSECRET/ch_6a45d1e193/index.m3u8
+#EXTINF:-1 tvg-id="htv-62fe3f921d" tvg-chno="9" tvg-name="CAR @ EDM · Nova Sport 2 (czech)" group-title="Live now",CAR @ EDM · Nova Sport 2 (czech)
+https://tv.zuxi.me/TESTSECRET/ch_62fe3f921d/index.m3u8

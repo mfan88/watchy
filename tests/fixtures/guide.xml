@@ -1,0 +1,136 @@
+<tv generator-info-name="htv">
+<channel id="htv-8f10348a47">
+<display-name>CAR @ EDM · SN+</display-name>
+</channel>
+<channel id="htv-39b7291724">
+<display-name>CAR @ EDM · ESPN+</display-name>
+</channel>
+<channel id="htv-501784e13d">
+</channel>
+<channel id="htv-17219f6f8b">
+<display-name>CAR @ EDM · Viaplay 3 Urheilu</display-name>
+</channel>
+<channel id="htv-27a62a7600">
+<display-name>CAR @ EDM · ESPN+ (away feed)</display-name>
+</channel>
+<channel id="htv-6dcaf0ae1b">
+<display-name>CAR @ EDM · TVA Sports (french)</display-name>
+</channel>
+<channel id="htv-e2c95771ea">
+<display-name>CAR @ EDM · beIN Sports Max 5 (french)</display-name>
+</channel>
+<channel id="htv-6a45d1e193">
+<display-name>CAR @ EDM</display-name>
+</channel>
+<channel id="htv-62fe3f921d">
+<display-name>CAR @ EDM · Nova Sport 2 (czech)</display-name>
+</channel>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-8f10348a47">
+<title>
+Hurricanes at Oilers · SN+ (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-8f10348a47">
+<title>Hurricanes at Oilers · SN+</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-39b7291724">
+<title>
+Hurricanes at Oilers · ESPN+ (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-39b7291724">
+<title>Hurricanes at Oilers · ESPN+</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-501784e13d">
+<title>
+Hurricanes at Oilers · SN West (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-501784e13d">
+<title>Hurricanes at Oilers · SN West</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-17219f6f8b">
+<title>
+Hurricanes at Oilers · Viaplay 3 Urheilu (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-17219f6f8b">
+<title>Hurricanes at Oilers · Viaplay 3 Urheilu</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-27a62a7600">
+<title>
+Hurricanes at Oilers · ESPN+ (away feed) (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-27a62a7600">
+<title>Hurricanes at Oilers · ESPN+ (away feed)</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-6dcaf0ae1b">
+<title>
+Hurricanes at Oilers · TVA Sports (french) (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-6dcaf0ae1b">
+<title>Hurricanes at Oilers · TVA Sports (french)</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-e2c95771ea">
+<title>
+Hurricanes at Oilers · beIN Sports Max 5 (french) (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-e2c95771ea">
+<title>Hurricanes at Oilers · beIN Sports Max 5 (french)</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-6a45d1e193">
+<title>
+Hurricanes at Oilers (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-6a45d1e193">
+<title>Hurricanes at Oilers</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+<programme start="20261022130000 +0000" stop="20261023010000 +0000" channel="htv-62fe3f921d">
+<title>
+Hurricanes at Oilers · Nova Sport 2 (czech) (starting soon)
+</title>
+<category>Sports</category>
+</programme>
+<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-62fe3f921d">
+<title>Hurricanes at Oilers · Nova Sport 2 (czech)</title>
+<desc>NHL: Carolina - Edmonton Oilers</desc>
+<category>Sports</category>
+<category>Sports event</category>
+</programme>
+</tv>
