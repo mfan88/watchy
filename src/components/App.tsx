@@ -5,6 +5,8 @@ import type { Programme } from "@/lib/xmltv";
 import { Avatar } from "./Avatar";
 import { Guide } from "./Guide";
 import { Player } from "./Player";
+import { Schedule } from "./Schedule";
+import { Stats } from "./Stats";
 import { matchupImage } from "@/lib/matchup";
 import { IconBell, IconGuide, IconSchedule, IconStats, IconWifi } from "./icons";
 
@@ -123,10 +125,9 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
                 </>
               )}
             </div>
-            {view === "guide" && <Guide channels={channels} guide={guide} />}
-            {(view === "schedule" || view === "stats") && (
-              <div className="empty"><h2>{view === "schedule" ? "Schedule" : "Stats"}</h2><p>Coming soon.</p></div>
-            )}
+            {view === "guide" && <Guide channels={channels} guide={guide} onWatch={(c) => { setGameName(c.game); setChannelId(c.id); setView("watch"); }} />}
+            {view === "schedule" && <Schedule />}
+            {view === "stats" && <Stats />}
           </div>
         </main>
       </div>
