@@ -5,6 +5,7 @@ import type { Programme } from "@/lib/xmltv";
 import { Avatar } from "./Avatar";
 import { Guide } from "./Guide";
 import { Player } from "./Player";
+import { matchupImage } from "@/lib/matchup";
 import { IconBell, IconGuide, IconSchedule, IconStats, IconWifi } from "./icons";
 
 type View = "watch" | "schedule" | "guide" | "stats";
@@ -108,13 +109,17 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
                     <div className="games">
                       {[...games.entries()].map(([g, list]) => (
                         <button key={g} className="game" aria-current={g === activeGame} onClick={() => { setGameName(g); setChannelId(list[0].id); }}>
-                          <span className="pair"><Avatar label={list[0].away ?? g} text={list[0].away?.slice(0, 3)} /><Avatar label={list[0].home ?? g} text={list[0].home?.slice(0, 3)} /></span>
+                          {matchupImage(list[0]) ? (
+                            <img className="thumb" src={matchupImage(list[0])} alt="" width={48} height={27} loading="lazy" decoding="async" />
+                          ) : (
+                            <span className="pair"><Avatar label={list[0].away ?? g} text={list[0].away?.slice(0, 3)} /><Avatar label={list[0].home ?? g} text={list[0].home?.slice(0, 3)} /></span>
+                          )}
                           {g}
                         </button>
                       ))}
                     </div>
                   )}
-                  {current && <Player channelId={current.id} title={`${current.game} · ${current.provider}`} onActiveChange={onActive} />}
+                  {current && <Player channelId={current.id} title={`${current.game} · ${current.provider}`} poster={matchupImage(current)} onActiveChange={onActive} />}
                 </>
               )}
             </div>

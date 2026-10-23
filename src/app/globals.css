@@ -98,6 +98,10 @@ svg { display: block; flex: none; }
 .status small { color: var(--muted); font-size: 13px; }
 .spinner { width: 38px; height: 38px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.15); border-top-color: var(--green); animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+.poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.overlay { z-index: 1; }
+.scrim { background: rgba(6, 5, 26, 0.28); }
+.game .thumb { width: 48px; height: 27px; border-radius: 6px; object-fit: cover; }
 .live-badge { position: absolute; left: 16px; top: 16px; background: rgba(13, 12, 36, 0.75); padding: 5px 10px; border-radius: 8px; font-size: 12px; display: flex; gap: 6px; align-items: center; }
 
 .controls { display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; }

@@ -10,8 +10,16 @@ const config: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "same-origin" },
           { key: "X-Frame-Options", value: "DENY" },
-          { key: "Cache-Control", value: "private, no-store" },
         ],
+      },
+      {
+        // Pages and API responses are per-user; never cache them.
+        source: "/((?!_next/static|_next/image|matchups|icon.svg).*)",
+        headers: [{ key: "Cache-Control", value: "private, no-store" }],
+      },
+      {
+        source: "/matchups/:file*",
+        headers: [{ key: "Cache-Control", value: "private, max-age=86400" }],
       },
     ];
   },
