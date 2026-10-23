@@ -89,7 +89,7 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
                 <button key={c.id} className="provider" aria-current={isCur && view === "watch"} onClick={() => { setChannelId(c.id); setView("watch"); }}>
                   <Avatar label={c.provider} />
                   <span className="name">{c.provider}</span>
-                  {isCur && playing ? <span style={{ color: "var(--green)" }} title="Playing"><IconWifi /></span> : <span className="dot" title="Live" />}
+                  {isCur && playing ? <span style={{ color: "var(--accent)" }} title="Playing"><IconWifi /></span> : <span className="dot" title="Live" />}
                 </button>
               );
             })}
