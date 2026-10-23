@@ -29,10 +29,11 @@ svg { display: block; flex: none; }
   border-radius: 40px; padding: 28px 22px 22px 28px;
   display: grid; gap: 0 22px;
   grid-template-columns: 270px minmax(0, 1fr);
-  grid-template-areas: "logo bar" "side main";
+  grid-template-areas: "top bar" "side main";
   box-shadow: 0 30px 80px rgba(8, 10, 40, 0.35);
 }
-.logo { grid-area: logo; padding: 6px 0 0 6px; height: 74px; display: flex; align-items: flex-start; }
+.shell { position: relative; }
+.logo { position: absolute; top: 28px; left: 50%; transform: translateX(-50%); display: flex; }
 .logo span { font-size: 30px; font-weight: 800; letter-spacing: -0.05em; line-height: 1; }
 .bar { grid-area: bar; position: relative; height: 74px; }
 .tab {
@@ -137,8 +138,9 @@ svg { display: block; flex: none; }
 
 @media (max-width: 900px) {
   .page { padding: 0; }
-  .shell { border-radius: 0; min-height: 100vh; padding: 18px 14px 20px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "logo bar" "main main" "side side"; gap: 0; }
-  .logo, .bar { height: 56px; }
+  .shell { border-radius: 0; min-height: 100vh; padding: 18px 14px 20px; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "top bar" "main main" "side side"; gap: 0; }
+  .bar { height: 56px; }
+  .logo { top: 18px; }
   .tab { position: static; width: auto; background: none; padding: 0; }
   .tab::before { display: none; }
   .main { border-radius: 26px; padding: 14px; min-height: 0; }
