@@ -37,7 +37,7 @@ function shiftGuide(xml) {
 }
 // MOCK_EXTRA=1 adds more games so the game selector (needs 2+) can be tested.
 function extraGames() {
-  const rows = [["aa11", "TOR @ EDM · TSN"], ["bb22", "EDM @ VAN · SN West"], ["cc33", "ABC @ XYZ · Some Channel"], ["dd44", "MTL @ CHI · RDS"], ["ee55", "TBL @ COL · SN360"]];
+  const rows = [["aa11", "TOR @ EDM · TSN"], ["bb22", "EDM @ VAN · SN West"], ["cc33", "ABC @ XYZ · Some Channel"], ["dd44", "MTL @ CHI · RDS"], ["ee55", "TBL @ COL · SN360"], ["ff66", "MTL @ WPG · TSN"]];
   return rows.map(([h, n], i) => `#EXTINF:-1 tvg-id="htv-${h}" tvg-chno="${20 + i}" tvg-name="${n}" group-title="Live now",${n}\nhttp://localhost:${PORT}/${SECRET}/ch_${h}/index.m3u8\n`).join("");
 }
 function extraGuide() {

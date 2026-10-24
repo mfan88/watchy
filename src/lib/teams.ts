@@ -1,9 +1,10 @@
+import codes from "./teams.json" with { type: "json" };
+
 // NHL team logos live in /public/teams/<CODE>.svg (dark-background variants).
-const CODES = new Set([
-  "ANA", "BOS", "BUF", "CAR", "CBJ", "CGY", "CHI", "COL", "DAL", "DET", "EDM", "FLA", "LAK", "MIN", "MTL", "NJD",
-  "NSH", "NYI", "NYR", "OTT", "PHI", "PIT", "SEA", "SJS", "STL", "TBL", "TOR", "UTA", "VAN", "VGK", "WPG", "WSH",
-]);
+const CODES = new Set<string>(codes);
+
+export const isTeam = (code?: string): code is string => !!code && CODES.has(code);
 
 export function teamLogo(code?: string): string | undefined {
-  return code && CODES.has(code) ? `/teams/${code}.svg` : undefined;
+  return isTeam(code) ? `/teams/${code}.svg` : undefined;
 }
