@@ -37,8 +37,12 @@ function shiftGuide(xml) {
 }
 // MOCK_EXTRA=1 adds more games so the game selector (needs 2+) can be tested.
 function extraGames() {
-  const rows = [["aa11", "TOR @ EDM · TSN"], ["bb22", "EDM @ VAN · SN West"], ["cc33", "ABC @ XYZ · Some Channel"]];
+  const rows = [["aa11", "TOR @ EDM · TSN"], ["bb22", "EDM @ VAN · SN West"], ["cc33", "ABC @ XYZ · Some Channel"], ["dd44", "MTL @ CHI · RDS"], ["ee55", "TBL @ COL · SN360"]];
   return rows.map(([h, n], i) => `#EXTINF:-1 tvg-id="htv-${h}" tvg-chno="${20 + i}" tvg-name="${n}" group-title="Live now",${n}\nhttp://localhost:${PORT}/${SECRET}/ch_${h}/index.m3u8\n`).join("");
+}
+function extraGuide() {
+  const ev = [["dd44", "Canadiens at Blackhawks · RDS", "NHL: Montréal - Chicago"], ["ee55", "Lightning at Avalanche · SN360", "NHL: Tampa Bay - Colorado"]];
+  return ev.map(([h, t, d]) => `<programme start="20261023010000 +0000" stop="20261023043000 +0000" channel="htv-${h}">\n<title>${t}</title>\n<desc>${d}</desc>\n</programme>\n`).join("");
 }
 const MIME = { ".m3u8": "application/vnd.apple.mpegurl", ".m4s": "video/mp4", ".mp4": "video/mp4" };
 
@@ -49,7 +53,7 @@ http.createServer((req, res) => {
   if (parts[0] !== SECRET) { res.writeHead(404).end(); return; }
   if (parts[1] === "playlist.m3u" || parts[1] === "guide.xml") {
     let body = readFileSync(new URL(parts[1], fx), "utf8").replaceAll("https://tv.zuxi.me", `http://localhost:${PORT}`);
-    if (parts[1] === "guide.xml") body = shiftGuide(body);
+    if (parts[1] === "guide.xml") body = shiftGuide(process.env.MOCK_EXTRA ? body.replace("</tv>", extraGuide() + "</tv>") : body);
     if (parts[1] === "playlist.m3u" && process.env.MOCK_EXTRA) body += extraGames();
     res.writeHead(200, { "content-type": parts[1].endsWith("m3u") ? "audio/x-mpegurl" : "application/xml" }).end(body);
     return;

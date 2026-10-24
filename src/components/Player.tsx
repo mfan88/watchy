@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { IconPlay, IconRefresh, IconStop } from "./icons";
+import { SplitPoster } from "./TeamPair";
 
 type Status = "idle" | "starting" | "playing" | "error";
 
@@ -27,7 +28,7 @@ async function waitUntilReady(url: string, signal: AbortSignal, onAttempt: (n: n
   throw new Error("Stream did not start in time.");
 }
 
-export function Player({ channelId, title, poster, onActiveChange }: { channelId: string; title: string; poster?: string; onActiveChange?: (active: boolean) => void }) {
+export function Player({ channelId, title, poster, teams, onActiveChange }: { channelId: string; title: string; poster?: string; teams?: { away?: string; home?: string }; onActiveChange?: (active: boolean) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [want, setWant] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -96,6 +97,7 @@ export function Player({ channelId, title, poster, onActiveChange }: { channelId
       <div className="player">
         <video ref={videoRef} playsInline controls={status === "playing"} aria-label={title} />
         {status !== "playing" && poster && <img className="poster" src={poster} alt="" width={640} height={360} decoding="async" />}
+        {status !== "playing" && !poster && teams?.away && teams?.home && <SplitPoster away={teams.away} home={teams.home} />}
         {status !== "playing" && (
           <div className={poster ? "overlay scrim" : "overlay"}>
             {status === "starting" ? (

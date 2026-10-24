@@ -5,6 +5,7 @@ import type { Programme } from "@/lib/xmltv";
 import { matchupImage } from "@/lib/matchup";
 import { providerLogo } from "@/lib/providers";
 import { Avatar } from "./Avatar";
+import { TeamPair } from "./TeamPair";
 
 const SEP = " · ";
 const fmt = new Intl.DateTimeFormat(undefined, { weekday: "short", hour: "numeric", minute: "2-digit" });
@@ -45,7 +46,11 @@ export function Guide({ channels, guide, onWatch }: { channels: Channel[]; guide
           return (
             <article className="card event" key={ev.title}>
               <button className="event-head" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : ev.title)}>
-                {img ? <img className="thumb" src={img} alt="" width={64} height={36} loading="lazy" decoding="async" /> : <span className="thumb ph" />}
+                {img ? (
+                  <img className="thumb" src={img} alt="" width={64} height={36} loading="lazy" decoding="async" />
+                ) : (
+                  <span className="thumb pairbox"><TeamPair away={ev.channels[0].away} home={ev.channels[0].home} fallback={ev.title} /></span>
+                )}
                 <span className="event-text">
                   <span className="event-title">
                     {ev.title}
