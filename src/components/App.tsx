@@ -8,6 +8,7 @@ import { Player } from "./Player";
 import { Schedule } from "./Schedule";
 import { Stats } from "./Stats";
 import { matchupImage } from "@/lib/matchup";
+import { providerLogo } from "@/lib/providers";
 import { ThemeToggle } from "./ThemeToggle";
 import { IconGuide, IconSchedule, IconStats, IconWifi } from "./icons";
 
@@ -88,7 +89,7 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
               const isCur = current?.id === c.id;
               return (
                 <button key={c.id} className="provider" aria-current={isCur && view === "watch"} onClick={() => { setChannelId(c.id); setView("watch"); }}>
-                  <Avatar label={c.provider} />
+                  <Avatar label={c.provider} src={providerLogo(c.provider)} />
                   <span className="name">{c.provider}</span>
                   {isCur && playing ? <span style={{ color: "var(--accent-text)" }} title="Playing"><IconWifi /></span> : <span className="dot" title="Live" />}
                 </button>

@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { Channel } from "@/lib/m3u";
 import type { Programme } from "@/lib/xmltv";
 import { matchupImage } from "@/lib/matchup";
+import { providerLogo } from "@/lib/providers";
 import { Avatar } from "./Avatar";
 
 const SEP = " · ";
@@ -62,7 +63,7 @@ export function Guide({ channels, guide, onWatch }: { channels: Channel[]; guide
                 <div className="streams">
                   {ev.channels.map((c) => (
                     <button key={c.id} className="stream" onClick={() => onWatch(c)}>
-                      <Avatar label={c.provider} />
+                      <Avatar label={c.provider} src={providerLogo(c.provider)} />
                       <span className="name">{c.provider}</span>
                       <span className="watch">Watch</span>
                     </button>

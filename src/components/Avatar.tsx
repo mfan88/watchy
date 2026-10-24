@@ -10,9 +10,9 @@ export function initials(text: string) {
   return letters.toUpperCase();
 }
 
-// Initials fallback. To use real images later, add an `src` prop here (e.g.
-// /teams/<code>.png) with fixed width/height and loading="lazy".
-export function Avatar({ label, text }: { label: string; text?: string }) {
+// A provider logo when one exists, otherwise coloured initials.
+export function Avatar({ label, text, src }: { label: string; text?: string; src?: string }) {
+  if (src) return <img className="avatar logo-tile" src={src} alt="" width={38} height={38} loading="lazy" decoding="async" />;
   // Alternate Oilers blue / orange by label so neighbours differ.
   const orange = hue(label) % 2 === 0;
   return (
