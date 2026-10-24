@@ -14,11 +14,11 @@ const config: NextConfig = {
       },
       {
         // Pages and API responses are per-user; never cache them.
-        source: "/((?!_next/static|_next/image|matchups|providers|icon.svg).*)",
+        source: "/((?!_next/static|_next/image|matchups|providers|teams|icon.svg).*)",
         headers: [{ key: "Cache-Control", value: "private, no-store" }],
       },
       {
-        source: "/:dir(matchups|providers)/:file*",
+        source: "/:dir(matchups|providers|teams)/:file*",
         headers: [{ key: "Cache-Control", value: "private, max-age=86400" }],
       },
     ];

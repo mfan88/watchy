@@ -35,6 +35,11 @@ function shiftGuide(xml) {
     return `${k}="${t.getUTCFullYear()}${pad(t.getUTCMonth() + 1)}${pad(t.getUTCDate())}${pad(t.getUTCHours())}${pad(t.getUTCMinutes())}${pad(t.getUTCSeconds())} +0000"`;
   });
 }
+// MOCK_EXTRA=1 adds more games so the game selector (needs 2+) can be tested.
+function extraGames() {
+  const rows = [["aa11", "TOR @ EDM · TSN"], ["bb22", "EDM @ VAN · SN West"], ["cc33", "ABC @ XYZ · Some Channel"]];
+  return rows.map(([h, n], i) => `#EXTINF:-1 tvg-id="htv-${h}" tvg-chno="${20 + i}" tvg-name="${n}" group-title="Live now",${n}\nhttp://localhost:${PORT}/${SECRET}/ch_${h}/index.m3u8\n`).join("");
+}
 const MIME = { ".m3u8": "application/vnd.apple.mpegurl", ".m4s": "video/mp4", ".mp4": "video/mp4" };
 
 http.createServer((req, res) => {
@@ -45,6 +50,7 @@ http.createServer((req, res) => {
   if (parts[1] === "playlist.m3u" || parts[1] === "guide.xml") {
     let body = readFileSync(new URL(parts[1], fx), "utf8").replaceAll("https://tv.zuxi.me", `http://localhost:${PORT}`);
     if (parts[1] === "guide.xml") body = shiftGuide(body);
+    if (parts[1] === "playlist.m3u" && process.env.MOCK_EXTRA) body += extraGames();
     res.writeHead(200, { "content-type": parts[1].endsWith("m3u") ? "audio/x-mpegurl" : "application/xml" }).end(body);
     return;
   }

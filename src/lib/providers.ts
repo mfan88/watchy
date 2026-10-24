@@ -2,6 +2,7 @@
 // logo in /public/providers. Order matters: the first matching rule wins.
 // Providers with no rule keep their initials.
 const RULES: [RegExp, string][] = [
+  [/^main feed$/i, "watchy.svg"], // channels with no provider name
   [/^espn\s*\+/i, "espn-plus"],
   [/^espn/i, "espn"],
   // SN, SN+, SN1, SNOne, SN360, SN West/East/Ontario/Pacific, Sportsnet ...
@@ -23,6 +24,6 @@ const RULES: [RegExp, string][] = [
 
 export function providerLogo(provider: string): string | undefined {
   const name = provider.trim();
-  for (const [re, key] of RULES) if (re.test(name)) return `/providers/${key}.webp`;
+  for (const [re, key] of RULES) if (re.test(name)) return `/providers/${key.includes(".") ? key : key + ".webp"}`;
   return undefined;
 }

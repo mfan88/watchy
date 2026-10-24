@@ -127,8 +127,9 @@ svg { display: block; flex: none; }
 }
 .game[aria-current="true"] { background: rgba(255, 76, 0, 0.14); color: var(--accent-text); box-shadow: inset 0 0 0 1px rgba(255, 76, 0, 0.4); }
 .game .pair { display: flex; }
-.game .pair .avatar { width: 26px; height: 26px; font-size: 9px; }
-.game .pair .avatar + .avatar { margin-left: -8px; box-shadow: 0 0 0 2px var(--panel-2); }
+.game .pair .avatar { width: 30px; height: 30px; font-size: 9px; letter-spacing: -0.02em; }
+.team-badge { width: 30px; height: 30px; border-radius: 50%; background: #0a1220; padding: 4px; object-fit: contain; flex: none; }
+.game .pair > * + * { margin-left: -8px; box-shadow: 0 0 0 2px var(--panel-2); }
 
 .player { position: relative; aspect-ratio: 16 / 9; width: min(100%, max(360px, calc((100dvh - 330px) * 16 / 9))); border-radius: 28px; overflow: hidden; background: radial-gradient(120% 120% at 50% 0%, #123a78, #050a16 70%); }
 .player video { width: 100%; height: 100%; display: block; background: #000; object-fit: contain; }

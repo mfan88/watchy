@@ -26,6 +26,11 @@ test("suffixes and numbers fold into the base network", () => {
   assert.equal(key("NHL Network"), "nhl-network");
 });
 
-test("unknown providers and the main feed fall back to initials", () => {
-  for (const n of ["Main feed", "Some Random Channel", "Snooker HD", ""]) assert.equal(providerLogo(n), undefined, n);
+test("main feed gets the watchy logo", () => {
+  assert.equal(providerLogo("Main feed"), "/providers/watchy.svg");
+  assert.equal(providerLogo("main feed"), "/providers/watchy.svg");
+});
+
+test("unknown providers fall back to initials", () => {
+  for (const n of ["Some Random Channel", "Snooker HD", "Main feed 2", ""]) assert.equal(providerLogo(n), undefined, n);
 });

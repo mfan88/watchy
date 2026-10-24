@@ -9,6 +9,7 @@ import { Schedule } from "./Schedule";
 import { Stats } from "./Stats";
 import { matchupImage } from "@/lib/matchup";
 import { providerLogo } from "@/lib/providers";
+import { teamLogo } from "@/lib/teams";
 import { ThemeToggle } from "./ThemeToggle";
 import { IconGuide, IconSchedule, IconStats, IconWifi } from "./icons";
 
@@ -113,11 +114,15 @@ export function App({ initial, initialError }: { initial: Channel[]; initialErro
                     <div className="games">
                       {[...games.entries()].map(([g, list]) => (
                         <button key={g} className="game" aria-current={g === activeGame} onClick={() => { setGameName(g); setChannelId(list[0].id); }}>
-                          {matchupImage(list[0]) ? (
-                            <img className="thumb" src={matchupImage(list[0])} alt="" width={48} height={27} loading="lazy" decoding="async" />
-                          ) : (
-                            <span className="pair"><Avatar label={list[0].away ?? g} text={list[0].away?.slice(0, 3)} /><Avatar label={list[0].home ?? g} text={list[0].home?.slice(0, 3)} /></span>
-                          )}
+                          <span className="pair">
+                            {[list[0].away, list[0].home].map((code, i) =>
+                              teamLogo(code) ? (
+                                <img key={i} className="team-badge" src={teamLogo(code)} alt="" width={30} height={30} loading="lazy" decoding="async" />
+                              ) : (
+                                <Avatar key={i} label={code ?? g} text={code?.slice(0, 3)} />
+                              ),
+                            )}
+                          </span>
                           {g}
                         </button>
                       ))}
