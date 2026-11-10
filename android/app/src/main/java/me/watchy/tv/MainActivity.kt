@@ -40,14 +40,10 @@ class MainActivity : AppCompatActivity() {
         }
         val homeTab = pill("Home")
         val guideTab = pill("Guide")
-        val signOut = pill("Sign out")
         tabs = listOf(homeTab, guideTab)
         tabs.forEachIndexed { i, t ->
             t.setOnClickListener { show(i) }
             t.setOnFocusChangeListener { _, f -> if (f) show(i) }
-        }
-        signOut.setOnClickListener {
-            lifecycleScope.launch { api.logout(); toLogin() }
         }
         clock = text("", 17f, R.color.text_dim)
 
@@ -59,8 +55,7 @@ class MainActivity : AppCompatActivity() {
             addView(homeTab, lp().apply { marginEnd = dp(6) })
             addView(guideTab)
             addView(View(this@MainActivity), lp(0, 1).apply { weight = 1f })
-            addView(clock, lp().apply { marginEnd = dp(20) })
-            addView(signOut)
+            addView(clock)
         }
         content = FrameLayout(this)
         setContentView(LinearLayout(this).apply {
@@ -110,11 +105,14 @@ class MainActivity : AppCompatActivity() {
             guide = runCatching { api.guide() }.getOrNull() ?: guide
             loaded = true
             home.error = null
-        } catch (e: AuthException) {
-            toLogin(); return
+        } catch (e: ApiException) {
+            // A key typed on the TV that stopped working: ask again.
+            if (!api.secretBundled && e.message.orEmpty().startsWith("Access key")) { toSetup(e.message); return }
+            loaded = true
+            home.error = e.message
         } catch (e: Exception) {
             loaded = true
-            home.error = "Can't reach the server. Retrying shortly."
+            home.error = "Can't reach the stream server. Retrying shortly."
         }
         render()
     }
@@ -123,13 +121,14 @@ class MainActivity : AppCompatActivity() {
         val list = if (channels.any { it.id == c.id }) channels else listOf(c)
         startActivity(Intent(this, PlayerActivity::class.java).apply {
             putExtra("index", list.indexOfFirst { it.id == c.id })
-            putExtra("ids", list.map { it.id }.toTypedArray())
+            putExtra("urls", list.map { it.url }.toTypedArray())
             putExtra("titles", list.map { "${it.game} · ${it.provider}" }.toTypedArray())
         })
     }
 
-    private fun toLogin() {
-        startActivity(Intent(this, LoginActivity::class.java))
+    private fun toSetup(error: String?) {
+        api.forgetSecret()
+        startActivity(Intent(this, SetupActivity::class.java).putExtra("error", error))
         finish()
     }
 

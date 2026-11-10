@@ -23,7 +23,6 @@ import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
 
 /** Full-screen live player. Up/Down (or CH+/CH−) flips between streams. */
 @OptIn(UnstableApi::class)
@@ -38,13 +37,11 @@ class PlayerActivity : AppCompatActivity() {
     private val osdSub by lazy { text("", 15f, R.color.text_dim) }
     private lateinit var spinner: ProgressBar
     private var osdJob: Job? = null
-    private var loadJob: Job? = null
-    private val streamHttp = OkHttpClient() // no session cookie to the stream host
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        ids = intent.getStringArrayExtra("ids") ?: emptyArray()
+        ids = intent.getStringArrayExtra("urls") ?: emptyArray()
         titles = intent.getStringArrayExtra("titles") ?: emptyArray()
         index = intent.getIntExtra("index", 0).coerceIn(0, (ids.size - 1).coerceAtLeast(0))
         if (ids.isEmpty()) { finish(); return }
@@ -76,7 +73,7 @@ class PlayerActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         val p = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(HlsMediaSource.Factory(OkHttpDataSource.Factory(streamHttp)))
+            .setMediaSourceFactory(HlsMediaSource.Factory(OkHttpDataSource.Factory(api.http)))
             .build()
         p.playWhenReady = true
         p.addListener(object : Player.Listener {
@@ -96,7 +93,6 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
-        loadJob?.cancel()
         view.player = null
         player?.release()
         player = null
@@ -104,25 +100,14 @@ class PlayerActivity : AppCompatActivity() {
     }
 
     private fun tune() {
-        val id = ids[index]
+        val url = ids[index]
         val (game, provider) = titles.getOrElse(index) { "" }.split(" · ", limit = 2).let { it[0] to it.getOrElse(1) { "" } }
         showOsd(game, if (ids.size > 1) "$provider  ·  ${index + 1}/${ids.size}  ·  ▲▼ change stream" else provider)
         spinner.visibility = View.VISIBLE
-        loadJob?.cancel()
-        loadJob = lifecycleScope.launch {
-            try {
-                val url = api.streamUrl(id)
-                player?.run {
-                    setMediaItem(MediaItem.Builder().setUri(url).setMimeType(MimeTypes.APPLICATION_M3U8)
-                        .setLiveConfiguration(MediaItem.LiveConfiguration.Builder().setTargetOffsetMs(12_000).build()).build())
-                    prepare()
-                }
-            } catch (e: AuthException) {
-                startActivity(android.content.Intent(this@PlayerActivity, LoginActivity::class.java)); finishAffinity()
-            } catch (e: Exception) {
-                spinner.visibility = View.GONE
-                showOsd(game, "This stream has ended or is unavailable", sticky = true)
-            }
+        player?.run {
+            setMediaItem(MediaItem.Builder().setUri(url).setMimeType(MimeTypes.APPLICATION_M3U8)
+                .setLiveConfiguration(MediaItem.LiveConfiguration.Builder().setTargetOffsetMs(12_000).build()).build())
+            prepare()
         }
     }
 

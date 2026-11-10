@@ -45,4 +45,14 @@ class ScreensTest {
         v.bind(channels, guide)
         paparazzi.snapshot(shell(v))
     }
+
+    @Test fun parsesFixtures() {
+        val dir = java.io.File("../../tests/fixtures")
+        val chans = Api.parseM3U(java.io.File(dir, "playlist.m3u").readText())
+        val progs = Api.parseXmltv(java.io.File(dir, "guide.xml").readText())
+        println("channels=${chans.size} first=${chans.firstOrNull()} programmes=${progs.size} first=${progs.firstOrNull()} soon=${progs.count { it.soon }}")
+        org.junit.Assert.assertTrue(chans.isNotEmpty() && chans.all { it.url.endsWith("index.m3u8") })
+        org.junit.Assert.assertTrue(progs.isNotEmpty())
+        org.junit.Assert.assertEquals(Api.parseTime("20261022130000 +0000"), 1792674000000L)
+    }
 }

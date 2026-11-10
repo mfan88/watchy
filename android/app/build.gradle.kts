@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,11 +16,20 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-        val server = (project.findProperty("watchyServer") as String?).orEmpty()
-        buildConfigField("String", "DEFAULT_SERVER", "\"$server\"")
+        // Stream server connection, same values as the website's HTV_BASE_URL / HTV_SECRET.
+        // Put them in android/secrets.properties (never committed) or pass -PhtvSecret=...
+        val secrets = Properties().apply {
+            rootProject.file("secrets.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+        }
+        fun setting(name: String, default: String = "") =
+            ((project.findProperty(name) as String?) ?: secrets.getProperty(name) ?: default).trim()
+        buildConfigField("String", "HTV_BASE_URL", "\"${setting("htvBaseUrl", "https://tv.zuxi.me")}\"")
+        buildConfigField("String", "HTV_SECRET", "\"${setting("htvSecret").trim('/')}\"")
     }
 
     buildFeatures { buildConfig = true }
+    // Team logos, provider logos and matchup art come from the website's public/ folder.
+    sourceSets["main"].assets.srcDir(rootProject.file("../public"))
     lint { checkReleaseBuilds = false }
 
     buildTypes {

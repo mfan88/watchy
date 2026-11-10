@@ -14,9 +14,8 @@ class WatchyApp : Application(), ImageLoaderFactory {
         api = Api(this)
     }
 
-    // Images live behind the same login, so Coil shares the authenticated client.
+    // Logos and matchup art are bundled in the APK's assets.
     override fun newImageLoader() = ImageLoader.Builder(this)
-        .okHttpClient(api.http)
         .components { add(SvgDecoder.Factory()) }
         .crossfade(true)
         .build()

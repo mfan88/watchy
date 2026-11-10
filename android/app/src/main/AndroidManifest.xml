@@ -19,7 +19,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".LoginActivity" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".SetupActivity" android:windowSoftInputMode="adjustResize" />
         <activity android:name=".MainActivity" />
         <activity android:name=".PlayerActivity" android:configChanges="orientation|screenSize|keyboardHidden" />
     </application>

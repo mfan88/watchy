@@ -43,9 +43,8 @@ fun View.focusZoom(scale: Float = 1.05f) {
 }
 
 fun ImageView.loadPath(ctx: Context, path: String?, fallback: (() -> Unit)? = null) {
-    val app = ctx.applicationContext as? WatchyApp
-    if (path == null || app == null) { fallback?.invoke(); return }
-    load(app.api.url(path)) { listener(onError = { _, _ -> fallback?.invoke() }) }
+    if (path == null) { fallback?.invoke(); return }
+    load("file:///android_asset" + path) { listener(onError = { _, _ -> fallback?.invoke() }) }
 }
 
 /** Initials avatar used when a provider has no logo. */

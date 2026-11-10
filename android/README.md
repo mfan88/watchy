@@ -1,9 +1,9 @@
 # Watchy for Android TV / Google TV
 
-A native Android TV client for the Watchy web app. It signs in with the same
-usernames and passwords (`HTV_USERS`) by calling the server's `/api/login`, keeps
-the same 7-day session cookie, and plays streams from `/api/channels`, `/api/guide`
-and `/api/stream`. No server changes are needed.
+A native Android TV client for Watchy. It connects straight to the stream server
+(`HTV_BASE_URL/HTV_SECRET/playlist.m3u`, `guide.xml` and the `.m3u8` streams), the same
+source the website's server reads, so it does not need the Vercel site and has no sign-in.
+Team logos, provider logos and matchup art are bundled from `../public`.
 
 - **Home**: one row per live (or starting-soon) game. The big tile plays the first
   feed; the chips beside it jump straight into each feed (home/away feeds are labelled
@@ -19,12 +19,16 @@ Minimum Android 6.0 (API 23), so it runs on the Mi Box 3/3S.
 Needs JDK 17+ and the Android SDK (`sdk.dir` in `local.properties` or `ANDROID_HOME`).
 
 ```bash
-./gradlew assembleRelease -PwatchyServer=https://your-watchy-host
+cp secrets.properties.example secrets.properties   # then fill in htvSecret (same as HTV_SECRET)
+./gradlew assembleRelease
 ```
 
-`-PwatchyServer` only prefills the server field on the sign-in screen; it can be left
-out and typed on the TV. The APK is at `app/build/outputs/apk/release/app-release.apk`
-(signed with the debug key so it installs directly).
+The secret is baked into the APK, so anyone who has the APK can extract it: share it
+only with people you'd give the stream server address to. Built without `htvSecret`,
+the app asks for the key once on first launch and remembers it.
+
+The APK is at `app/build/outputs/apk/release/app-release.apk` (signed with the debug
+key so it installs directly).
 
 ## Install on the Mi Box over adb
 

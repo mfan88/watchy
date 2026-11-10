@@ -1,115 +1,138 @@
 package me.watchy.tv
 
 import android.content.Context
-import android.content.SharedPreferences
+import android.util.Xml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.Cookie
-import okhttp3.CookieJar
-import okhttp3.HttpUrl
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
+import org.xmlpull.v1.XmlPullParser
+import java.util.Calendar
+import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
-class AuthException : Exception("unauthorized")
 class ApiException(msg: String) : Exception(msg)
 
-/** Persists the server's session cookie so sign-in survives restarts (same 7-day JWT as the web app). */
-private class PrefsCookieJar(private val prefs: SharedPreferences) : CookieJar {
-    override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        for (c in cookies) if (c.name == COOKIE) {
-            if (c.expiresAt < System.currentTimeMillis() || c.value.isEmpty()) prefs.edit().remove(KEY).apply()
-            else prefs.edit().putString(KEY, c.value).putString(KEY_HOST, url.host).apply()
-        }
-    }
-    override fun loadForRequest(url: HttpUrl): List<Cookie> {
-        val v = prefs.getString(KEY, null) ?: return emptyList()
-        if (prefs.getString(KEY_HOST, null) != url.host) return emptyList()
-        return listOf(Cookie.Builder().name(COOKIE).value(v).hostOnlyDomain(url.host).path("/").build())
-    }
-    fun clear() = prefs.edit().remove(KEY).apply()
-    fun has() = prefs.contains(KEY)
-    companion object {
-        const val COOKIE = "watchy_session"
-        const val KEY = "session"
-        const val KEY_HOST = "session_host"
-    }
-}
-
+/**
+ * Talks straight to the stream server (HTV_BASE_URL/HTV_SECRET/...), the same
+ * source the website's server reads. The secret is baked in at build time or
+ * entered once on first launch.
+ */
 class Api(ctx: Context) {
     private val prefs = ctx.getSharedPreferences("watchy", Context.MODE_PRIVATE)
-    private val jar = PrefsCookieJar(prefs)
     val http: OkHttpClient = OkHttpClient.Builder()
-        .cookieJar(jar)
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    var server: String
-        get() = prefs.getString("server", null) ?: BuildConfig.DEFAULT_SERVER
-        set(v) = prefs.edit().putString("server", v.trim().trimEnd('/')).apply()
+    val base: String get() = BuildConfig.HTV_BASE_URL.trimEnd('/')
 
-    var username: String
-        get() = prefs.getString("username", "") ?: ""
-        set(v) = prefs.edit().putString("username", v).apply()
+    var secret: String
+        get() = BuildConfig.HTV_SECRET.ifEmpty { prefs.getString("secret", "") ?: "" }
+        set(v) = prefs.edit().putString("secret", v.trim().trim('/')).apply()
 
-    val signedIn get() = jar.has() && server.isNotEmpty()
+    val configured get() = secret.isNotEmpty()
+    val secretBundled get() = BuildConfig.HTV_SECRET.isNotEmpty()
+    fun forgetSecret() = prefs.edit().remove("secret").apply()
 
-    fun url(path: String) = server.trimEnd('/') + path
-
-    private suspend fun get(path: String): JSONObject = withContext(Dispatchers.IO) {
-        http.newCall(Request.Builder().url(url(path)).header("Accept", "application/json").build()).execute().use { r ->
-            if (r.code == 401) { jar.clear(); throw AuthException() }
-            val body = r.body?.string().orEmpty()
-            val json = runCatching { JSONObject(body) }.getOrNull()
-            if (!r.isSuccessful && json == null) throw ApiException("Server error ${r.code}")
-            json ?: throw ApiException("Unexpected response")
-        }
-    }
-
-    suspend fun login(user: String, pass: String) = withContext(Dispatchers.IO) {
-        val body = JSONObject().put("username", user).put("password", pass).toString()
-            .toRequestBody("application/json".toMediaType())
-        val req = try {
-            Request.Builder().url(url("/api/login")).post(body).build()
-        } catch (e: IllegalArgumentException) {
-            throw ApiException("Invalid server address")
-        }
+    private suspend fun fetch(file: String): String = withContext(Dispatchers.IO) {
+        val req = try { Request.Builder().url("$base/$secret/$file").build() }
+                  catch (e: IllegalArgumentException) { throw ApiException("Invalid access key") }
         http.newCall(req).execute().use { r ->
-            if (!r.isSuccessful) {
-                val msg = runCatching { JSONObject(r.body!!.string()).getString("error") }.getOrNull()
-                throw ApiException(msg ?: "Sign-in failed (${r.code})")
-            }
-            if (!jar.has()) throw ApiException("Server did not start a session")
+            if (r.code == 401 || r.code == 403 || r.code == 404) throw ApiException("Access key not accepted (${r.code})")
+            if (!r.isSuccessful) throw ApiException("Stream server error ${r.code}")
+            r.body?.string().orEmpty()
         }
     }
 
-    suspend fun logout() {
-        withContext(Dispatchers.IO) {
-            runCatching {
-                http.newCall(Request.Builder().url(url("/api/logout")).post(ByteArray(0).toRequestBody()).build()).execute().close()
+    suspend fun channels(): List<Channel> = parseM3U(fetch("playlist.m3u"))
+
+    suspend fun guide(): Guide = withContext(Dispatchers.Default) {
+        val xml = fetch("guide.xml")
+        Guide(System.currentTimeMillis(), parseXmltv(xml))
+    }
+
+    companion object {
+        private const val SEP = " · "
+
+        fun parseM3U(text: String): List<Channel> {
+            val out = mutableListOf<Channel>()
+            val lines = text.lines()
+            val attrRe = Regex("([\\w-]+)=\"([^\"]*)\"")
+            for (i in lines.indices) {
+                val line = lines[i].trim()
+                if (!line.startsWith("#EXTINF:")) continue
+                val attrs = attrRe.findAll(line).associate { it.groupValues[1] to it.groupValues[2] }
+                val title = line.replace(Regex("\"[^\"]*\""), "\"\"").split(",").drop(1).joinToString(",").trim()
+                var url = ""
+                for (j in i + 1 until lines.size) {
+                    val l = lines[j].trim()
+                    if (l.isEmpty()) continue
+                    if (!l.startsWith("#")) url = l
+                    break
+                }
+                val id = attrs["tvg-id"]
+                if (url.isEmpty() || id.isNullOrEmpty()) continue
+                val name = attrs["tvg-name"].orEmpty().ifEmpty { title.ifEmpty { id } }
+                val k = name.indexOf(SEP)
+                val game = if (k == -1) name else name.substring(0, k)
+                val provider = if (k == -1) "Main feed" else name.substring(k + SEP.length)
+                val teams = Regex("^(\\S+)\\s+@\\s+(\\S+)$").find(game)
+                out += Channel(id, attrs["tvg-chno"]?.toIntOrNull() ?: (out.size + 1), name, game, provider,
+                    teams?.groupValues?.get(1), teams?.groupValues?.get(2), url)
             }
+            return out
         }
-        jar.clear()
-    }
 
-    suspend fun channels(): List<Channel> {
-        val arr = get("/api/channels").optJSONArray("channels") ?: return emptyList()
-        return (0 until arr.length()).map { Channel.from(arr.getJSONObject(it)) }
-    }
+        // "20261022130000 +0000" -> epoch ms
+        fun parseTime(v: String): Long? {
+            val m = Regex("^(\\d{4})(\\d{2})(\\d{2})(\\d{2})(\\d{2})(\\d{2})?\\s*([+-]\\d{4})?$").find(v.trim()) ?: return null
+            val g = m.groupValues
+            val cal = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+                clear()
+                set(g[1].toInt(), g[2].toInt() - 1, g[3].toInt(), g[4].toInt(), g[5].toInt(), g[6].ifEmpty { "0" }.toInt())
+            }
+            val tz = g[7].ifEmpty { "+0000" }
+            val off = (if (tz[0] == '-') -1 else 1) * (tz.substring(1, 3).toInt() * 60 + tz.substring(3, 5).toInt())
+            return cal.timeInMillis - off * 60_000L
+        }
 
-    suspend fun guide(): Guide {
-        val j = get("/api/guide")
-        val arr = j.optJSONArray("programmes")
-        val list = if (arr == null) emptyList() else (0 until arr.length()).map { Programme.from(arr.getJSONObject(it)) }
-        return Guide(j.optLong("now", System.currentTimeMillis()), list)
-    }
-
-    suspend fun streamUrl(channelId: String): String {
-        val j = get("/api/stream?id=" + java.net.URLEncoder.encode(channelId, "UTF-8"))
-        return j.optString("url").ifEmpty { throw ApiException(j.optString("error", "Stream unavailable")) }
+        fun parseXmltv(xml: String): List<Programme> {
+            val out = mutableListOf<Programme>()
+            val p = Xml.newPullParser()
+            p.setInput(xml.reader())
+            var c: String? = null; var s: Long? = null; var e: Long? = null
+            var t: String? = null; var d: String? = null; var field: String? = null
+            while (true) {
+                when (p.next()) {
+                    XmlPullParser.END_DOCUMENT -> break
+                    XmlPullParser.START_TAG -> when (p.name) {
+                        "programme" -> {
+                            c = p.getAttributeValue(null, "channel")
+                            s = p.getAttributeValue(null, "start")?.let(::parseTime)
+                            e = p.getAttributeValue(null, "stop")?.let(::parseTime)
+                            t = null; d = null
+                        }
+                        "title", "desc" -> field = p.name
+                    }
+                    XmlPullParser.TEXT -> when (field) {
+                        "title" -> t = (t.orEmpty() + p.text)
+                        "desc" -> d = (d.orEmpty() + p.text)
+                    }
+                    XmlPullParser.END_TAG -> when (p.name) {
+                        "title", "desc" -> field = null
+                        "programme" -> {
+                            var title = t?.replace(Regex("\\s+"), " ")?.trim()
+                            if (c != null && s != null && e != null && !title.isNullOrEmpty()) {
+                                val soon = Regex("\\(starting soon\\)\\s*$", RegexOption.IGNORE_CASE).containsMatchIn(title)
+                                if (soon) title = title.replace(Regex("\\s*\\(starting soon\\)\\s*$", RegexOption.IGNORE_CASE), "")
+                                out += Programme(c, s, e, title, d?.replace(Regex("\\s+"), " ")?.trim()?.ifEmpty { null }, soon)
+                            }
+                        }
+                    }
+                }
+            }
+            return out
+        }
     }
 }

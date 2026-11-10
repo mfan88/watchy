@@ -1,28 +1,11 @@
 package me.watchy.tv
 
-import org.json.JSONObject
-
 data class Channel(
     val id: String, val no: Int, val name: String, val game: String,
-    val provider: String, val away: String?, val home: String?,
-) {
-    companion object {
-        fun from(j: JSONObject) = Channel(
-            j.getString("id"), j.optInt("no"), j.optString("name"), j.optString("game"),
-            j.optString("provider", "Main feed"),
-            j.optString("away").ifEmpty { null }, j.optString("home").ifEmpty { null },
-        )
-    }
-}
+    val provider: String, val away: String?, val home: String?, val url: String = "",
+)
 
-data class Programme(val c: String, val s: Long, val e: Long, val t: String, val d: String?, val soon: Boolean) {
-    companion object {
-        fun from(j: JSONObject) = Programme(
-            j.getString("c"), j.getLong("s"), j.getLong("e"), j.optString("t"),
-            j.optString("d").ifEmpty { null }, j.optBoolean("soon"),
-        )
-    }
-}
+data class Programme(val c: String, val s: Long, val e: Long, val t: String, val d: String?, val soon: Boolean)
 
 data class Guide(val now: Long, val programmes: List<Programme>)
 
