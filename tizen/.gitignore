@@ -1,0 +1,7 @@
+build/
+*.wgt
+secrets.properties
+.buildResult
+.sign/
+author-signature.xml
+signature1.xml

@@ -166,7 +166,7 @@ class HomeView(ctx: Context, private val onPlay: (Channel) -> Unit) : FrameLayou
         val role = when (Games.feedRole(c)) {
             Games.Role.HOME -> "Home feed"; Games.Role.AWAY -> "Away feed"; else -> null
         }
-        if (role != null) col.addView(ctx.text(role, 12f, R.color.text_dim), lp().apply { topMargin = ctx.dp(3) })
+        if (role != null && !Regex("\\b(home|away)\\b", RegexOption.IGNORE_CASE).containsMatchIn(c.provider)) col.addView(ctx.text(role, 12f, R.color.text_dim), lp().apply { topMargin = ctx.dp(3) })
         chip.addView(col)
         return chip
     }
