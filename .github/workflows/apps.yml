@@ -30,12 +30,18 @@ on:
 permissions:
   contents: read
 
+# On PRs, a new push cancels CI still running for the previous one.
+concurrency:
+  group: apps-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '0.0.0' }}
 
 jobs:
   android:
     name: Android TV (.apk)
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -70,6 +76,7 @@ jobs:
 
   tizen:
     name: Samsung TV (.wgt)
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -135,12 +142,14 @@ jobs:
             # they're in the profile; expect gives it one and answers the prompts.
             sudo apt-get install -y -q expect >/dev/null
             expect -c '
-              set timeout 300
+              set timeout 120
               spawn ./package.sh watchy
               expect {
+                -nocase -re {save[^\n]*password} { send -- "n\r"; exp_continue }
                 -nocase -re {author[^\n]*password:} { send -- "$env(AUTHOR_PW)\r"; exp_continue }
                 -nocase -re {distributor[^\n]*password:} { send -- "$env(DIST_PW)\r"; exp_continue }
                 -nocase -re {password:} { send -- "$env(DIST_PW)\r"; exp_continue }
+                timeout { puts "\n::error::No password prompt for 2 minutes; the Tizen CLI output is above."; exit 2 }
                 eof
               }
               catch wait result
@@ -161,6 +170,7 @@ jobs:
 
   macos:
     name: macOS (.dmg)
+    timeout-minutes: 60
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -187,6 +197,7 @@ jobs:
 
   windows:
     name: Windows (installer + zip)
+    timeout-minutes: 45
     runs-on: windows-latest
     defaults:
       run:
@@ -223,6 +234,7 @@ jobs:
 
   linux:
     name: Linux (AppImage + tar.gz)
+    timeout-minutes: 45
     # Built on the oldest supported Ubuntu so the AppImage runs on newer distros too
     # (Ubuntu 22.04+, Debian 12+, Fedora, Arch, ...).
     runs-on: ubuntu-22.04
@@ -250,6 +262,7 @@ jobs:
 
   release:
     name: Publish release
+    timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch'
     needs: [android, tizen, macos, windows, linux]
     runs-on: ubuntu-latest
