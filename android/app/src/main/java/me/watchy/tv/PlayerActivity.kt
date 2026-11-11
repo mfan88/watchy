@@ -59,7 +59,7 @@ class PlayerActivity : AppCompatActivity() {
             orientation = LinearLayout.VERTICAL
             setBackgroundResource(R.drawable.osd_bg)
             setPadding(dp(24), dp(18), dp(28), dp(18))
-            addView(text("LIVE", 11f, bold = true).apply { setBackgroundResource(R.drawable.badge_live); setPadding(dp(7), dp(3), dp(7), dp(3)) }, lp().apply { bottomMargin = dp(10) })
+            addView(text("LIVE", 11f, label = true).apply { setBackgroundResource(R.drawable.badge_live); setPadding(dp(7), dp(3), dp(7), dp(3)) }, lp().apply { bottomMargin = dp(10) })
             addView(osdTitle)
             addView(osdSub, lp().apply { topMargin = dp(6) })
         }

@@ -81,7 +81,7 @@ class GuideView(ctx: Context, private val onPlay: (Channel) -> Unit) : LinearLay
             addView(dMeta, lp().apply { topMargin = ctx.dp(8) })
         }, lp(MATCH).apply { bottomMargin = ctx.dp(12) })
         addView(LinearLayout(ctx).apply {
-            addView(ctx.text("Today", 14f, R.color.text_faint, true).apply { letterSpacing = 0.1f }, lp(labelW))
+            addView(ctx.text("Today", 14f, R.color.text_faint, label = true).apply { letterSpacing = 0.1f }, lp(labelW))
             addView(header, lp(0, ctx.dp(28)).apply { weight = 1f })
         }, lp(MATCH))
         addView(View(ctx).apply { setBackgroundColor(ctx.color(R.color.stroke)) }, lp(MATCH, 1).apply { bottomMargin = ctx.dp(6) })

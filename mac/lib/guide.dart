@@ -101,7 +101,7 @@ class _Detail extends StatelessWidget {
     var meta = c.provider;
     if (p != null) meta += '  ·  ${fmtTime(p!.s)} – ${fmtTime(p!.e)}  ·  ${p!.soon || DateTime.now().isBefore(p!.s) ? 'Starting soon' : 'Live'}';
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(p?.title ?? c.game, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
+      Text(p?.title ?? c.game, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: titleFont, fontSize: 24, fontWeight: FontWeight.w600)),
       const SizedBox(height: 6),
       Text(meta, style: const TextStyle(color: C.dim, fontSize: 14)),
       if (p?.d != null) Text(p!.d!, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.dim, fontSize: 14)),
@@ -130,7 +130,7 @@ class _Row extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(channel.game, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                Text(channel.game, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: titleFont, fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 3),
                 Text(channel.provider, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: C.dim)),
               ]),
@@ -163,7 +163,7 @@ class _Row extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text(p?.title ?? channel.game, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          Text(p?.title ?? channel.game, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: titleFont, fontSize: 14, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 3),
                           Text(p == null ? 'Live stream' : p.soon ? 'Starting soon' : '${fmtTime(p.s)} – ${fmtTime(p.e)}', maxLines: 1, style: const TextStyle(fontSize: 12, color: C.dim)),
                         ]),

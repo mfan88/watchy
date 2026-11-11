@@ -17,8 +17,12 @@ class C {
   static const soon = Color(0xFFF0A93B);
 }
 
+/// Titles use DM Sans; all other text uses IBM Plex Sans (the theme default).
+const titleFont = 'DMSans';
+
 ThemeData watchyTheme() => ThemeData(
       brightness: Brightness.dark,
+      fontFamily: 'IBMPlexSans',
       scaffoldBackgroundColor: C.bg,
       colorScheme: const ColorScheme.dark(primary: C.accent, surface: C.surface, onSurface: C.text),
       focusColor: C.accent.withValues(alpha: .25),

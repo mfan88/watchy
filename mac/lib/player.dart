@@ -123,7 +123,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                           const LiveBadge(true),
                           const SizedBox(height: 8),
-                          Text(_ch.game, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w600)),
+                          Text(_ch.game, style: const TextStyle(fontFamily: titleFont, fontSize: 24, fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
                           Text(_error ?? '${_ch.provider}${widget.queue.length > 1 ? '  ·  ${_i + 1}/${widget.queue.length}  ·  ↑↓ change stream' : ''}',
                               style: TextStyle(color: _error != null ? C.live : C.dim, fontSize: 14)),

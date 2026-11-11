@@ -40,6 +40,16 @@ cp js/boot.js "$OUT/js/"
 node -e 'process.stdout.write("var WATCHY_CONFIG = " + JSON.stringify({ auth: process.argv[1], version: process.argv[2], repo: process.argv[3], img: process.argv[4] }) + ";\n")' "$AUTH_URL" "$VERSION" "$UPDATE_REPO" "$IMG_EXT" > "$OUT/js/config.js"
 node -e 'process.stdout.write("var WATCHY_MISSING = " + require("fs").readFileSync(process.argv[1], "utf8").trim() + ";\n")' ../src/lib/matchups-missing.json > "$OUT/js/missing.js"
 sed -i.bak "s/version=\"[0-9.]*\" viewmodes/version=\"$VERSION\" viewmodes/" "$OUT/config.xml" && rm -f "$OUT/config.xml.bak"
+# Embed the web fonts in the stylesheet so they also arrive with over-the-air updates
+# (those replace app.js and the CSS, not files in fonts/).
+node -e '
+const fs = require("fs"), p = process.argv[1];
+const css = fs.readFileSync(p, "utf8").replace(/url\(\.\.\/fonts\/([\w-]+\.woff)\)/g, (m, f) =>
+  "url(data:font/woff;base64," + fs.readFileSync(process.argv[2] + "/fonts/" + f).toString("base64") + ")");
+fs.writeFileSync(p, css);
+' "$OUT/css/style.css" "$OUT"
+rm -f "$OUT"/fonts/*.woff
+
 # Over-the-air code update published with each release (see js/boot.js).
 node -e '
 const fs = require("fs");
