@@ -49,8 +49,10 @@ fs.writeFileSync(process.argv[3], JSON.stringify({ version: process.argv[1], js:
 echo "Version $VERSION"
 
 if command -v tizen >/dev/null 2>&1; then
-  if [ $# -ge 1 ]; then tizen package -t wgt -s "$1" -- "$OUT" -o .
-  else tizen package -t wgt -- "$OUT" -o .; fi
+  # Options must come before "--"; everything after it is the project directory.
+  rm -f ./*.wgt
+  if [ $# -ge 1 ]; then tizen package -t wgt -s "$1" -o . -- "$OUT"
+  else tizen package -t wgt -o . -- "$OUT"; fi
   mv -f ./*.wgt Watchy.wgt 2>/dev/null || true
 else
   (cd "$OUT" && rm -f ../Watchy.wgt && zip -qr ../Watchy.wgt .)
