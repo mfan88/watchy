@@ -98,25 +98,30 @@ jobs:
           echo "$HOME/tizen-studio/tools/ide/bin" >> "$GITHUB_PATH"
           "$HOME/tizen-studio/tools/ide/bin/tizen" security-profiles add -n watchy \
             -a "$RUNNER_TEMP/author.p12" -p "$AUTHOR_PW" -d "$RUNNER_TEMP/distributor.p12" -dp "$DIST_PW"
-          # The CLI stores passwords as .pwd files that need a desktop keyring to decrypt,
-          # which CI runners don't have: put the passwords straight into the profile.
-          python3 - "$HOME/tizen-studio-data/profile/profiles.xml" <<'PY'
-          import os, sys, xml.etree.ElementTree as ET
-          p = sys.argv[1]; tree = ET.parse(p)
-          pw = {"0": os.environ["AUTHOR_PW"], "1": os.environ["DIST_PW"]}
-          for item in tree.iter("profileitem"):
-              d = item.get("distributor")
-              if d in pw and item.get("key"):
-                  item.set("password", pw[d])
-          tree.write(p, encoding="UTF-8", xml_declaration=True)
-          PY
           echo "signed=true" >> "$GITHUB_OUTPUT"
       - name: Package
         working-directory: tizen
+        env:
+          AUTHOR_PW: ${{ secrets.TIZEN_AUTHOR_PASSWORD }}
+          DIST_PW: ${{ secrets.TIZEN_DISTRIBUTOR_PASSWORD }}
         run: |
           if [ "${{ steps.certs.outputs.signed }}" = "true" ]; then
+            # The Tizen CLI asks for the certificate passwords on a terminal even though
+            # they're in the profile; expect gives it one and answers the prompts.
+            sudo apt-get install -y -q expect >/dev/null
+            expect -c '
+              set timeout 600
+              spawn ./package.sh watchy
+              expect {
+                -nocase -re {author[^\n]*password:} { send -- "$env(AUTHOR_PW)\r"; exp_continue }
+                -nocase -re {distributor[^\n]*password:} { send -- "$env(DIST_PW)\r"; exp_continue }
+                eof
+              }
+              catch wait result
+              exit [lindex $result 3]
+            ' || { echo "::error::Signing failed. Tizen CLI log:"; tail -n 60 "$HOME"/tizen-studio-data/cli/logs/cli.log || true; exit 1; }
             # Certificates are configured, so an unsigned package would be a silent failure.
-            ./package.sh watchy || { echo "::error::Signing failed. Tizen CLI log:"; tail -n 60 "$HOME"/tizen-studio-data/cli/logs/cli.log || true; exit 1; }
+            unzip -l Watchy.wgt | grep -q author-signature.xml || { echo "::error::Watchy.wgt is not signed"; exit 1; }
           else
             ./package.sh
           fi
