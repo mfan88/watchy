@@ -1,0 +1,100 @@
+@font-face { font-family: Anxler; src: url(../fonts/anxler.ttf); }
+* { box-sizing: border-box; }
+#av { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; visibility: hidden; }
+body.playing #av { visibility: visible; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0B0E13; color: #F2F4F8; font-family: "SamsungOne", "Roboto", "Helvetica Neue", Arial, sans-serif; }
+.hidden { display: none !important; }
+.dim { color: #9AA4B2; }
+.wordmark { font-family: Anxler, sans-serif; font-size: 60px; line-height: 1; }
+.wordmark.big { font-size: 80px; margin-bottom: 12px; }
+
+/* top bar */
+#bar { position: absolute; left: 96px; right: 96px; top: 44px; height: 70px; }
+#bar .wordmark { position: absolute; left: 0; top: 4px; }
+#tabs { position: absolute; left: 270px; top: 6px; white-space: nowrap; }
+.tab { display: inline-block; margin-right: 12px; height: 56px; line-height: 56px; padding: 0 44px; border-radius: 28px; font-size: 32px; font-weight: 500; color: #9AA4B2; }
+.tab.sel { background: #1E2530; color: #F2F4F8; }
+.tab.focus { background: #F2F4F8; color: #0B0E13; }
+#signout { position: absolute; right: 0; top: 6px; }
+#clock { position: absolute; right: 230px; top: 16px; font-size: 32px; color: #9AA4B2; }
+
+.view { position: absolute; left: 0; right: 0; top: 140px; bottom: 0; overflow: hidden; }
+.empty { position: absolute; left: 0; right: 0; top: 340px; text-align: center; font-size: 40px; }
+.empty .dim { font-size: 30px; margin-top: 18px; }
+
+/* home */
+#home-list { position: absolute; left: 96px; right: 0; top: 0; -webkit-transition: -webkit-transform .2s; transition: transform .2s; }
+.row { position: relative; height: 436px; padding-top: 28px; }
+.tile { position: absolute; left: 0; top: 28px; width: 704px; height: 396px; border-radius: 22px; background: #151A22; border: 2px solid #2A3240; overflow: hidden; -webkit-transition: -webkit-transform .15s; transition: transform .15s; }
+.tile img.m { width: 100%; height: 100%; display: block; }
+.tile .pair { position: absolute; left: 0; right: 0; top: 120px; text-align: center; font-size: 44px; color: #5F6978; }
+.tile .pair img { width: 168px; height: 168px; vertical-align: middle; margin: 0 30px; }
+.tile .scrim { position: absolute; left: 0; right: 0; bottom: 0; height: 140px; background: -webkit-linear-gradient(bottom, rgba(11,14,19,.9), rgba(11,14,19,0)); background: linear-gradient(to top, rgba(11,14,19,.9), rgba(11,14,19,0)); }
+.tile .badge { position: absolute; left: 24px; top: 24px; }
+.tile .watch { position: absolute; left: 28px; bottom: 24px; font-size: 28px; font-weight: 500; }
+.tile.focus { border: 6px solid #F2F4F8; -webkit-transform: scale(1.04); transform: scale(1.04); z-index: 2; }
+.info { position: absolute; left: 760px; right: 96px; top: 36px; }
+.info h2 { margin: 0; font-size: 56px; font-weight: 500; }
+.info .sub { font-size: 32px; color: #9AA4B2; margin-top: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info .count { font-size: 24px; color: #5F6978; letter-spacing: 3px; font-weight: 500; margin: 44px 0 20px; }
+.feeds-wrap { overflow: hidden; margin: -16px -96px 0 -24px; padding: 16px 96px 16px 24px; }
+.feeds { white-space: nowrap; -webkit-transition: -webkit-transform .2s; transition: transform .2s; }
+.feed { display: inline-block; vertical-align: top; height: 116px; padding: 20px 36px 20px 20px; margin: 0 24px 0 0; border-radius: 20px; background: #1E2530; -webkit-transition: -webkit-transform .15s; transition: transform .15s; }
+.feed.focus { background: #4C8DFF; -webkit-transform: scale(1.06); transform: scale(1.06); }
+.av { display: inline-block; vertical-align: middle; width: 72px; height: 72px; border-radius: 36px; background: #2A3240; overflow: hidden; text-align: center; line-height: 72px; font-size: 26px; font-weight: 500; margin-right: 24px; }
+.av img { width: 72px; height: 72px; display: block; }
+.feed .txt { display: inline-block; vertical-align: middle; }
+.feed .name { font-size: 32px; font-weight: 500; }
+.feed .role { font-size: 24px; color: #C9D2DE; margin-top: 6px; }
+.badge { display: inline-block; font-size: 22px; font-weight: 700; letter-spacing: 2px; padding: 6px 14px; border-radius: 8px; }
+.badge.live { background: #E5484D; color: #F2F4F8; }
+.badge.soon { background: #F0A93B; color: #0B0E13; }
+
+/* guide */
+#g-detail { position: absolute; left: 96px; right: 96px; top: 8px; height: 184px; }
+#g-title { font-size: 52px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#g-meta { font-size: 32px; color: #9AA4B2; margin-top: 16px; line-height: 44px; max-height: 88px; overflow: hidden; }
+#g-head { position: absolute; left: 96px; right: 96px; top: 200px; height: 58px; border-bottom: 2px solid #2A3240; }
+.g-label-head { position: absolute; left: 0; top: 10px; font-size: 26px; letter-spacing: 3px; color: #5F6978; font-weight: 500; }
+#g-times { position: absolute; left: 600px; right: 0; top: 0; height: 56px; }
+#g-times div { position: absolute; top: 12px; font-size: 28px; color: #9AA4B2; }
+#g-body { position: absolute; left: 96px; right: 96px; top: 272px; bottom: 0; overflow: hidden; }
+#g-rows { position: absolute; left: 0; right: 0; top: 0; -webkit-transition: -webkit-transform .2s; transition: transform .2s; }
+.g-row { position: relative; height: 136px; }
+.g-label { position: absolute; left: 0; top: 8px; width: 580px; height: 120px; }
+.g-label .av { position: absolute; left: 0; top: 24px; }
+.g-label .g { position: absolute; left: 104px; right: 16px; top: 28px; font-size: 34px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-label .p { position: absolute; left: 104px; right: 16px; top: 74px; font-size: 28px; color: #9AA4B2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.g-line { position: absolute; left: 600px; right: 0; top: 8px; height: 120px; }
+.prog { position: absolute; top: 0; height: 120px; border-radius: 12px; background: #151A22; padding: 22px 28px 0; overflow: hidden; }
+.prog.now { background: #1E2530; border: 2px solid #1F3A66; }
+.prog.focus { background: #4C8DFF; border: 0; }
+.prog .t { font-size: 32px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prog .m { font-size: 26px; color: #9AA4B2; margin-top: 8px; white-space: nowrap; }
+.prog.focus .m { color: #F2F4F8; }
+.nowline { position: absolute; top: 0; width: 3px; opacity: .85; height: 100%; background: #4C8DFF; z-index: 3; }
+.prog.focus ~ .nowline { opacity: .5; }
+
+/* setup */
+#setup { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0B0E13; }
+#setup .panel { position: absolute; left: 560px; top: 250px; width: 800px; padding: 72px 80px; border-radius: 40px; background: #151A22; border: 2px solid #2A3240; text-align: center; }
+#setup .dim { font-size: 30px; margin-bottom: 52px; }
+#user, #key { margin-bottom: 20px; }
+#user, #key { width: 100%; height: 96px; font-size: 34px; padding: 0 32px; border-radius: 20px; background: #0B0E13; color: #F2F4F8; border: 2px solid #2A3240; outline: none; }
+#user.focus, #key.focus { border: 4px solid #4C8DFF; }
+#setup-err { color: #E5484D; font-size: 28px; min-height: 40px; margin: 22px 0; }
+.btn { height: 100px; line-height: 100px; border-radius: 20px; background: #1F3A66; font-size: 34px; font-weight: 500; }
+.btn.focus { background: #4C8DFF; }
+
+/* player */
+#player { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+body.playing { background: transparent; }
+body.playing #app { display: none; }
+#osd { position: absolute; left: 96px; top: 72px; padding: 36px 56px 36px 48px; border-radius: 24px; background: rgba(11,14,19,.85); -webkit-transition: opacity .3s; transition: opacity .3s; }
+#osd.off { opacity: 0; }
+#osd-title { font-size: 48px; font-weight: 500; margin-top: 20px; }
+#osd-sub { font-size: 30px; color: #9AA4B2; margin-top: 12px; }
+.spinner { position: absolute; left: 912px; top: 492px; width: 96px; height: 96px; border-radius: 50%; border: 8px solid rgba(242,244,248,.2); border-top-color: #F2F4F8; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
+@-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+.empty .spinner { position: relative; left: auto; top: auto; margin: 0 auto; }

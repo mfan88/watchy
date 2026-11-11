@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>Watchy</title>
+<link rel="stylesheet" href="css/style.css" id="css">
+<script src="$WEBAPIS/webapis/webapis.js"></script>
+</head>
+<body>
+<object id="av" type="application/avplayer"></object>
+<div id="app">
+  <div id="bar">
+    <div class="wordmark">watchy</div>
+    <div id="tabs"><div class="tab f" id="tab-home" data-key="tab-home">Home</div><div class="tab f" id="tab-guide" data-key="tab-guide">Guide</div></div>
+    <div class="tab f" id="signout" data-key="signout">Sign out</div>
+    <div id="clock"></div>
+  </div>
+  <div id="home" class="view"><div id="home-list"></div><div class="empty" id="home-empty"></div></div>
+  <div id="guide" class="view hidden">
+    <div id="g-detail"><div id="g-title"></div><div id="g-meta"></div></div>
+    <div id="g-head"><div class="g-label-head">Today</div><div id="g-times"></div></div>
+    <div id="g-body"><div id="g-rows"></div></div>
+    <div class="empty" id="guide-empty"></div>
+  </div>
+</div>
+<div id="setup" class="hidden">
+  <div class="panel">
+    <div class="wordmark big">watchy</div>
+    <div class="dim">Sign in with your Watchy account</div>
+    <input id="user" class="f" type="text" autocomplete="off" spellcheck="false" placeholder="Username">
+    <input id="key" class="f" type="password" autocomplete="off" placeholder="Password">
+    <div id="setup-err"></div>
+    <div id="setup-go" class="btn f">Sign in</div>
+  </div>
+</div>
+<div id="player" class="hidden">
+  <div id="osd"><span class="badge live">LIVE</span><div id="osd-title"></div><div id="osd-sub"></div></div>
+  <div id="spinner" class="spinner"></div>
+</div>
+<script src="js/config.js"></script>
+<script src="js/missing.js"></script>
+<script src="js/boot.js"></script>
+</body>
+</html>
