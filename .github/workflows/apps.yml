@@ -13,6 +13,9 @@
 #   TIZEN_AUTHOR_P12_BASE64, TIZEN_AUTHOR_PASSWORD,
 #   TIZEN_DISTRIBUTOR_P12_BASE64, TIZEN_DISTRIBUTOR_PASSWORD   Samsung certificates; without
 #                                                         them the .wgt is unsigned
+#   MACOS_CERT_P12_BASE64, MACOS_CERT_PASSWORD,
+#   APPLE_ID, APPLE_APP_PASSWORD, APPLE_TEAM_ID         Developer ID signing + notarization;
+#                                                         without them macOS warns on first open
 name: Apps
 
 on:
@@ -121,8 +124,14 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Build
+      - name: Build, sign and notarize
         working-directory: mac
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           flutter test
           ./build_dmg.sh "$VERSION"
