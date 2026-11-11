@@ -13,7 +13,7 @@ class HomeView extends StatelessWidget {
     if (games.isEmpty) {
       return Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Text(error != null ? "Can't reach the stream server" : 'No live games right now', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
+          Text(error != null ? "Can't reach the stream server" : 'No live games right now', style: const TextStyle(fontFamily: titleFont, fontSize: 22, fontWeight: FontWeight.w600)),
           const SizedBox(height: 10),
           Text(error ?? 'Games appear here when they start. This window refreshes automatically.', style: const TextStyle(color: C.dim, fontSize: 15)),
         ]),
@@ -62,7 +62,7 @@ class _GameRow extends StatelessWidget {
       Expanded(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           const SizedBox(height: 4),
-          Text(g.title, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w600)),
+          Text(g.title, style: const TextStyle(fontFamily: titleFont, fontSize: 26, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
           Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: C.dim, fontSize: 14)),
           const SizedBox(height: 18),

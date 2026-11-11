@@ -61,7 +61,7 @@ class _SetupScreenState extends State<SetupScreen> {
                   child: FilledButton(
                     onPressed: _busy ? null : _go,
                     style: FilledButton.styleFrom(backgroundColor: C.accent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                    child: Text(_busy ? 'Signing in…' : 'Sign in', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: C.text)),
+                    child: Text(_busy ? 'Signing in…' : 'Sign in', style: const TextStyle(fontFamily: titleFont, fontSize: 15, fontWeight: FontWeight.w600, color: C.text)),
                   ),
                 ),
               ]),

@@ -112,7 +112,7 @@ class _ShellState extends State<Shell> {
             foregroundColor: sel ? C.text : C.dim,
             shape: const StadiumBorder(),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+            textStyle: const TextStyle(fontFamily: titleFont, fontSize: 15, fontWeight: FontWeight.w600),
           ),
           child: Text(label),
         ),

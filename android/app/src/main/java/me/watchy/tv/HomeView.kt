@@ -97,7 +97,7 @@ class HomeView(ctx: Context, private val onPlay: (Channel) -> Unit) : FrameLayou
             img.loadPath(ctx, Assets.matchup(g.away, g.home)) { showPair(ctx, pair, g) }
             tile.addView(View(ctx).apply { setBackgroundResource(R.drawable.scrim) }, LayoutParams(MATCH, ctx.dp(70), Gravity.BOTTOM))
             tile.addView(ctx.badge(g.live), LayoutParams(WRAP, WRAP, Gravity.TOP or Gravity.START).apply { setMargins(ctx.dp(12), ctx.dp(12), 0, 0) })
-            tile.addView(ctx.text("▶  Watch", 14f, bold = true), LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.START).apply { setMargins(ctx.dp(14), 0, 0, ctx.dp(12)) })
+            tile.addView(ctx.text("▶  Watch", 14f, label = true), LayoutParams(WRAP, WRAP, Gravity.BOTTOM or Gravity.START).apply { setMargins(ctx.dp(14), 0, 0, ctx.dp(12)) })
             h.root.addView(tile, lp(ctx.dp(352), ctx.dp(198)))
 
             // Details + feeds
@@ -114,7 +114,7 @@ class HomeView(ctx: Context, private val onPlay: (Channel) -> Unit) : FrameLayou
                 if (isEmpty()) append(if (g.live) "Live now" else "Starting soon")
             }
             info.addView(ctx.text(sub, 16f, R.color.text_dim).apply { maxLines = 1; ellipsize = android.text.TextUtils.TruncateAt.END }, lp().apply { topMargin = ctx.dp(8) })
-            info.addView(ctx.text("${g.feeds.size} ${if (g.feeds.size == 1) "STREAM" else "STREAMS"}", 12f, R.color.text_faint, bold = true).apply { letterSpacing = 0.1f }, lp().apply { topMargin = ctx.dp(22); bottomMargin = ctx.dp(10) })
+            info.addView(ctx.text("${g.feeds.size} ${if (g.feeds.size == 1) "STREAM" else "STREAMS"}", 12f, R.color.text_faint, label = true).apply { letterSpacing = 0.1f }, lp().apply { topMargin = ctx.dp(22); bottomMargin = ctx.dp(10) })
 
             val feeds = LinearLayout(ctx).apply { orientation = LinearLayout.HORIZONTAL; clipChildren = false; clipToPadding = false }
             for (c in g.feeds) feeds.addView(feedChip(ctx, c), lp().apply { marginEnd = ctx.dp(12) })
@@ -134,7 +134,7 @@ class HomeView(ctx: Context, private val onPlay: (Channel) -> Unit) : FrameLayou
         pair.removeAllViews()
         if (Assets.isTeam(g.away) && Assets.isTeam(g.home)) {
             for ((i, code) in listOf(g.away, g.home).withIndex()) {
-                if (i == 1) pair.addView(ctx.text("@", 22f, R.color.text_faint, true), lp().apply { setMargins(ctx.dp(18), 0, ctx.dp(18), 0) })
+                if (i == 1) pair.addView(ctx.text("@", 22f, R.color.text_faint, label = true), lp().apply { setMargins(ctx.dp(18), 0, ctx.dp(18), 0) })
                 pair.addView(ImageView(ctx).apply { loadPath(ctx, Assets.teamLogo(code)) }, lp(ctx.dp(84), ctx.dp(84)))
             }
         } else {
@@ -162,7 +162,7 @@ class HomeView(ctx: Context, private val onPlay: (Channel) -> Unit) : FrameLayou
         } else holder.addView(ctx.initials(c.provider, 36), FrameLayout.LayoutParams(size, size))
         chip.addView(holder, lp(size, size).apply { marginEnd = ctx.dp(12) })
         val col = LinearLayout(ctx).apply { orientation = LinearLayout.VERTICAL }
-        col.addView(ctx.text(c.provider, 16f, bold = true).apply { maxLines = 1 })
+        col.addView(ctx.text(c.provider, 16f, label = true).apply { maxLines = 1 })
         val role = when (Games.feedRole(c)) {
             Games.Role.HOME -> "Home feed"; Games.Role.AWAY -> "Away feed"; else -> null
         }

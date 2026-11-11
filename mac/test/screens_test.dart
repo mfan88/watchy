@@ -23,7 +23,8 @@ void main() {
   late List<Programme> programmes;
 
   setUpAll(() async {
-    await _font('Roboto', ['/usr/share/fonts/opentype/inter/Inter-Regular.otf', '/usr/share/fonts/opentype/inter/Inter-SemiBold.otf']);
+    await _font('IBMPlexSans', ['assets/fonts/IBMPlexSans-Regular.ttf', 'assets/fonts/IBMPlexSans-Medium.ttf', 'assets/fonts/IBMPlexSans-SemiBold.ttf']);
+    await _font('DMSans', ['assets/fonts/DMSans-Medium.ttf', 'assets/fonts/DMSans-SemiBold.ttf', 'assets/fonts/DMSans-Bold.ttf']);
     await _font('Anxler', ['assets/fonts/anxler.ttf']);
     final flutterRoot = Platform.environment['FLUTTER_ROOT'] ?? '/opt/flutter';
     await _font('MaterialIcons', ['$flutterRoot/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf']);
@@ -45,8 +46,8 @@ void main() {
 
   Widget frame(Widget child) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: watchyTheme().copyWith(textTheme: watchyTheme().textTheme.apply(fontFamily: 'Roboto')),
-        home: Scaffold(body: DefaultTextStyle.merge(style: const TextStyle(fontFamily: 'Roboto'), child: child)),
+        theme: watchyTheme(),
+        home: Scaffold(body: child),
       );
 
   for (final screen in ['home', 'guide']) {

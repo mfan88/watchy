@@ -25,6 +25,7 @@ class SetupActivity : AppCompatActivity() {
             setTextColor(color(R.color.text))
             setHintTextColor(color(R.color.text_faint))
             textSize = 18f
+            typeface = Fonts.body(context)
             setBackgroundResource(R.drawable.input_bg)
             setPadding(dp(18), dp(14), dp(18), dp(14))
             imeOptions = EditorInfo.IME_ACTION_NEXT or EditorInfo.IME_FLAG_NO_EXTRACT_UI
@@ -36,6 +37,7 @@ class SetupActivity : AppCompatActivity() {
         val error = text(intent.getStringExtra("error") ?: "", 15f, R.color.live).apply { gravity = Gravity.CENTER }
         val submit = Button(this).apply {
             text = "Sign in"
+            typeface = Fonts.title(context)
             isAllCaps = false
             textSize = 18f
             setTextColor(color(R.color.text))
