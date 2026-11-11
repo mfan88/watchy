@@ -49,6 +49,9 @@ class PlayerActivity : AppCompatActivity() {
         view = PlayerView(this).apply {
             useController = true
             controllerShowTimeoutMs = 3000
+            // Don't pop the controls up on their own while a stream loads or buffers:
+            // they'd capture Up/Down. OK still shows them.
+            controllerAutoShow = false
             setShowFastForwardButton(false); setShowRewindButton(false)
             setShowNextButton(false); setShowPreviousButton(false)
             setBackgroundColor(color(android.R.color.black))
@@ -136,8 +139,10 @@ class PlayerActivity : AppCompatActivity() {
             when (event.keyCode) {
                 KeyEvent.KEYCODE_CHANNEL_UP -> { step(-1); return true }
                 KeyEvent.KEYCODE_CHANNEL_DOWN -> { step(1); return true }
-                KeyEvent.KEYCODE_DPAD_UP -> if (!controls) { step(-1); return true }
-                KeyEvent.KEYCODE_DPAD_DOWN -> if (!controls) { step(1); return true }
+                // Up/Down always change stream (remotes like the Mi Box's have no CH+/CH-),
+                // even while loading or with the controls showing.
+                KeyEvent.KEYCODE_DPAD_UP -> { view.hideController(); step(-1); return true }
+                KeyEvent.KEYCODE_DPAD_DOWN -> { view.hideController(); step(1); return true }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
                     val p = player
                     if (p != null && p.playerError != null) { tune(); return true }
