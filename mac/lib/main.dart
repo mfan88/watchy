@@ -53,7 +53,7 @@ class _ShellState extends State<Shell> {
   List<Channel>? _channels;
   List<Programme> _guide = const [];
   String? _error;
-  Timer? _refresh, _tick;
+  Timer? _refresh, _tick, _updates;
   Update? _update;
 
   @override
@@ -63,7 +63,8 @@ class _ShellState extends State<Shell> {
     // Re-check the saved login on every launch: removed accounts are signed out,
     // a rotated key is picked up. Offline is fine: keep the key we have.
     widget.api.refresh().catchError((Object e) { if (e is AuthException && mounted) widget.onSignOut(e.message); });
-    Updater.check().then((u) { if (mounted && u != null) setState(() => _update = u); });
+    _checkUpdate();
+    _updates = Timer.periodic(const Duration(hours: 6), (_) => _checkUpdate());
     _refresh = Timer.periodic(const Duration(minutes: 2), (_) => _load());
     _tick = Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
   }
@@ -72,8 +73,11 @@ class _ShellState extends State<Shell> {
   void dispose() {
     _refresh?.cancel();
     _tick?.cancel();
+    _updates?.cancel();
     super.dispose();
   }
+
+  void _checkUpdate() => Updater.check().then((u) { if (mounted && u != null) setState(() => _update = u); });
 
   Future<void> _load() async {
     try {

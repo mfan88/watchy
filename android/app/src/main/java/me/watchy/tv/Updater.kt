@@ -18,7 +18,14 @@ import java.io.File
 
 /** Checks GitHub Releases for a newer APK and offers to install it. */
 object Updater {
-    private var checked = false
+    // Android TV keeps the app in memory when you leave it, so "once per launch" isn't
+    // enough: check whenever the home screen comes to the foreground, at most every
+    // 15 minutes, and after "Later" don't ask again for 6 hours.
+    private var busy = false
+    private var lastCheck = 0L
+    private var snoozedUntil = 0L
+    private const val CHECK_EVERY = 15 * 60_000L
+    private const val SNOOZE = 6 * 60 * 60_000L
 
     fun newer(latest: String, current: String): Boolean {
         fun parts(v: String) = v.trimStart('v', 'V').split('.', '-').map { it.toIntOrNull() ?: 0 }
@@ -31,17 +38,24 @@ object Updater {
     }
 
     fun <T> check(activity: T) where T : Activity, T : LifecycleOwner {
-        if (checked || BuildConfig.UPDATE_REPO.isEmpty()) return
-        checked = true
+        val now = System.currentTimeMillis()
+        if (busy || BuildConfig.UPDATE_REPO.isEmpty() || now < snoozedUntil || now - lastCheck < CHECK_EVERY) return
+        busy = true
+        lastCheck = now
         activity.lifecycleScope.launch {
-            val (tag, url) = runCatching { latest(activity) }.getOrNull() ?: return@launch
-            if (!newer(tag, BuildConfig.VERSION_NAME) || activity.isFinishing) return@launch
-            AlertDialog.Builder(activity)
-                .setTitle("Update available")
-                .setMessage("Watchy ${tag.trimStart('v')} is available (you have ${BuildConfig.VERSION_NAME}).")
-                .setPositiveButton("Update") { _, _ -> install(activity, url) }
-                .setNegativeButton("Later", null)
-                .show()
+            try {
+                val (tag, url) = runCatching { latest(activity) }.getOrNull() ?: return@launch
+                if (!newer(tag, BuildConfig.VERSION_NAME) || activity.isFinishing) return@launch
+                AlertDialog.Builder(activity)
+                    .setTitle("Update available")
+                    .setMessage("Watchy ${tag.trimStart('v')} is available (you have ${BuildConfig.VERSION_NAME}).")
+                    .setPositiveButton("Update") { _, _ -> install(activity, url) }
+                    .setNegativeButton("Later") { _, _ -> snoozedUntil = System.currentTimeMillis() + SNOOZE }
+                    .setOnCancelListener { snoozedUntil = System.currentTimeMillis() + SNOOZE }
+                    .show()
+            } finally {
+                busy = false
+            }
         }
     }
 
@@ -66,7 +80,7 @@ object Updater {
                 .setTitle("Allow updates")
                 .setMessage("To update itself, Watchy needs permission to install apps. Turn it on for Watchy on the next screen, then come back and choose Update again.")
                 .setPositiveButton("Open settings") { _, _ ->
-                    checked = false
+                    lastCheck = 0L // check again as soon as they're back from settings
                     a.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${a.packageName}")))
                 }
                 .setNegativeButton("Cancel", null)
