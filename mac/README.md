@@ -8,22 +8,20 @@ playlist and guide straight from the stream server and has no login. Video plays
 Player keys: ↑/↓ change stream, Space pause, Enter retry, Esc back. Clicking a stream chip
 at the bottom switches between feeds of the same game.
 
-## Build (on a Mac)
+## Make a DMG with the key baked in (on a Mac)
 
 Needs Flutter 3.24+ and Xcode.
 
 ```bash
-flutter pub get
-flutter build macos --release --dart-define=HTV_SECRET=<your key>
+cp secrets.properties.example secrets.properties   # fill in htvSecret (git-ignored)
+./build_dmg.sh                                     # -> mac/Watchy.dmg
 ```
 
-The app is at `build/macos/Build/Products/Release/Watchy.app`; drag it to Applications.
-Leave out `--dart-define=HTV_SECRET` and the app asks for the key once (and shows a key
-button in the toolbar to change it). `--dart-define=HTV_BASE_URL=...` overrides
-`https://tv.zuxi.me`.
-
-The build isn't notarized, so the first launch needs right-click → **Open** (or System
+Anyone with the DMG can extract the key, so only share it with people you trust. The app
+is ad-hoc signed, not notarized: the first time, right-click Watchy → **Open** (or System
 Settings → Privacy & Security → Open Anyway).
+
+Without `build_dmg.sh`, `flutter build macos --release` builds an app that asks for the key once.
 
 `assets/public` is a symlink to the website's `public/` folder (logos and matchup art).
 
