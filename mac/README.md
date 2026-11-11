@@ -21,6 +21,9 @@ flutter build windows --release --dart-define=APP_VERSION=2.0.0   # installer: p
 flutter build linux   --release --dart-define=APP_VERSION=2.0.0   # AppImage: packaging/build_appimage.sh 2.0.0
 ```
 
+The DMG is Developer ID-signed and notarized when the `MACOS_*` / `APPLE_*` secrets are
+set (see `build_dmg.sh` and `.github/workflows/apps.yml`); otherwise it's ad-hoc signed.
+
 Linux needs `clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev`. Builds without
 `APP_VERSION` never offer updates. `--dart-define=AUTH_URL=` overrides the sign-in endpoint.
 

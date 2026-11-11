@@ -13,6 +13,9 @@
 #   TIZEN_AUTHOR_P12_BASE64, TIZEN_AUTHOR_PASSWORD,
 #   TIZEN_DISTRIBUTOR_P12_BASE64, TIZEN_DISTRIBUTOR_PASSWORD   Samsung certificates; without
 #                                                         them the .wgt is unsigned
+#   MACOS_CERT_P12_BASE64, MACOS_CERT_PASSWORD,
+#   APPLE_ID, APPLE_APP_PASSWORD, APPLE_TEAM_ID         Developer ID signing + notarization;
+#                                                         without them macOS warns on first open
 name: Apps
 
 on:
@@ -27,12 +30,18 @@ on:
 permissions:
   contents: read
 
+# On PRs, a new push cancels CI still running for the previous one.
+concurrency:
+  group: apps-${{ github.event_name == 'pull_request' && github.head_ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || '0.0.0' }}
 
 jobs:
   android:
     name: Android TV (.apk)
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,6 +76,7 @@ jobs:
 
   tizen:
     name: Samsung TV (.wgt)
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -89,18 +99,64 @@ jobs:
           fi
           echo "$AUTHOR" | base64 -d > "$RUNNER_TEMP/author.p12"
           echo "$DIST" | base64 -d > "$RUNNER_TEMP/distributor.p12"
+          # Say exactly which secret is wrong instead of the Tizen CLI's generic "Invalid password".
+          bad=0
+          for c in "author:AUTHOR_PW:TIZEN_AUTHOR" "distributor:DIST_PW:TIZEN_DISTRIBUTOR"; do
+            IFS=: read -r name var secret <<< "$c"
+            f="$RUNNER_TEMP/$name.p12"
+            if ! head -c 2 "$f" | od -An -tx1 | grep -q "30 8"; then
+              echo "::error::${secret}_P12_BASE64 does not decode to a .p12 file (re-encode it with: base64 -i $name.p12 | pbcopy)"; bad=1
+            elif ! openssl pkcs12 -in "$f" -passin "env:$var" -noout 2>/dev/null && ! openssl pkcs12 -legacy -in "$f" -passin "env:$var" -noout 2>/dev/null; then
+              echo "::error::${secret}_PASSWORD does not open ${secret}_P12_BASE64 ($name.p12)"; bad=1
+            else
+              echo "$name certificate and password OK"
+            fi
+          done
+          [ "$bad" = 0 ] || exit 1
           curl -fsSL -o "$RUNNER_TEMP/tizen-cli.bin" https://download.tizen.org/sdk/Installer/tizen-studio_6.1/web-cli_Tizen_Studio_6.1_ubuntu-64.bin
           chmod +x "$RUNNER_TEMP/tizen-cli.bin"
           "$RUNNER_TEMP/tizen-cli.bin" --accept-license "$HOME/tizen-studio"
           echo "$HOME/tizen-studio/tools/ide/bin" >> "$GITHUB_PATH"
           "$HOME/tizen-studio/tools/ide/bin/tizen" security-profiles add -n watchy \
             -a "$RUNNER_TEMP/author.p12" -p "$AUTHOR_PW" -d "$RUNNER_TEMP/distributor.p12" -dp "$DIST_PW"
+          # The CLI saves the passwords encrypted with a desktop keyring that CI runners don't
+          # have, so it reads them back wrong ("Invalid password"). Clear them so it asks
+          # instead; the Package step answers its prompts.
+          python3 - "$HOME/tizen-studio-data/profile/profiles.xml" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          p = sys.argv[1]; tree = ET.parse(p)
+          for item in tree.iter("profileitem"):
+              if item.get("key"):
+                  item.set("password", "")
+          tree.write(p, encoding="UTF-8", xml_declaration=True)
+          PY
           echo "signed=true" >> "$GITHUB_OUTPUT"
       - name: Package
         working-directory: tizen
+        env:
+          AUTHOR_PW: ${{ secrets.TIZEN_AUTHOR_PASSWORD }}
+          DIST_PW: ${{ secrets.TIZEN_DISTRIBUTOR_PASSWORD }}
         run: |
           if [ "${{ steps.certs.outputs.signed }}" = "true" ]; then
-            ./package.sh watchy || { echo "::warning::Signing failed; publishing an unsigned .wgt"; PATH=$(echo "$PATH" | tr ':' '\n' | grep -v tizen-studio | paste -sd:) ./package.sh; }
+            # The Tizen CLI asks for the certificate passwords on a terminal even though
+            # they're in the profile; expect gives it one and answers the prompts.
+            sudo apt-get install -y -q expect >/dev/null
+            expect -c '
+              set timeout 120
+              spawn ./package.sh watchy
+              expect {
+                -nocase -re {save[^\n]*password} { send -- "n\r"; exp_continue }
+                -nocase -re {author[^\n]*password:} { send -- "$env(AUTHOR_PW)\r"; exp_continue }
+                -nocase -re {distributor[^\n]*password:} { send -- "$env(DIST_PW)\r"; exp_continue }
+                -nocase -re {password:} { send -- "$env(DIST_PW)\r"; exp_continue }
+                timeout { puts "\n::error::No password prompt for 2 minutes; the Tizen CLI output is above."; exit 2 }
+                eof
+              }
+              catch wait result
+              exit [lindex $result 3]
+            ' || { echo "::error::Signing failed. Tizen CLI log:"; tail -n 60 "$HOME"/tizen-studio-data/cli/logs/cli.log || true; exit 1; }
+            # Certificates are configured, so an unsigned package would be a silent failure.
+            unzip -l Watchy.wgt | grep -q author-signature.xml || { echo "::error::Watchy.wgt is not signed"; exit 1; }
           else
             ./package.sh
           fi
@@ -114,6 +170,7 @@ jobs:
 
   macos:
     name: macOS (.dmg)
+    timeout-minutes: 60
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -121,8 +178,14 @@ jobs:
         with:
           channel: stable
           cache: true
-      - name: Build
+      - name: Build, sign and notarize
         working-directory: mac
+        env:
+          MACOS_CERT_P12_BASE64: ${{ secrets.MACOS_CERT_P12_BASE64 }}
+          MACOS_CERT_PASSWORD: ${{ secrets.MACOS_CERT_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           flutter test
           ./build_dmg.sh "$VERSION"
@@ -134,6 +197,7 @@ jobs:
 
   windows:
     name: Windows (installer + zip)
+    timeout-minutes: 45
     runs-on: windows-latest
     defaults:
       run:
@@ -170,6 +234,7 @@ jobs:
 
   linux:
     name: Linux (AppImage + tar.gz)
+    timeout-minutes: 45
     # Built on the oldest supported Ubuntu so the AppImage runs on newer distros too
     # (Ubuntu 22.04+, Debian 12+, Fedora, Arch, ...).
     runs-on: ubuntu-22.04
@@ -197,6 +262,7 @@ jobs:
 
   release:
     name: Publish release
+    timeout-minutes: 15
     if: github.event_name == 'workflow_dispatch'
     needs: [android, tizen, macos, windows, linux]
     runs-on: ubuntu-latest

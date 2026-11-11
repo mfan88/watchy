@@ -52,11 +52,8 @@ install or update it. If you're doing it yourself, follow
 
 ### Mac
 
-1. Open the `.dmg` and drag **Watchy** onto **Applications**.
-2. The first time only, **right-click** (or Control-click) Watchy in Applications and choose
-   **Open**, then **Open** again. Watchy isn't from the App Store, so macOS asks once. If
-   it still refuses, go to **System Settings → Privacy & Security** and click
-   **Open Anyway**.
+Open the `.dmg` and drag **Watchy** onto **Applications**, then open it from
+Applications like any other app.
 
 ### Windows
 
