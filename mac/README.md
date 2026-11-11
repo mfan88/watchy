@@ -1,27 +1,28 @@
-# Watchy for macOS (Flutter)
+# Watchy desktop (Flutter): macOS, Windows, Linux
 
 Desktop version of the Watchy TV apps: **Home** (one row per live game, click a stream to
-play) and **Guide** (TV-guide grid). Like the Android TV and Tizen apps it reads the
-playlist and guide straight from the stream server and has no login. Video plays through
-`video_player`, which uses Apple's AVPlayer (native HLS).
+play) and **Guide** (TV-guide grid). Users sign in with a Watchy account at the stream
+server's `/auth/key` endpoint, which returns the stream key; nothing secret is built in.
+Video plays through `media_kit` (libmpv) on all three platforms. Installs from the
+DMG, the Windows installer and the AppImage update themselves from the latest GitHub release
+(`lib/updater.dart`).
 
 Player keys: ↑/↓ change stream, Space pause, Enter retry, Esc back. Clicking a stream chip
 at the bottom switches between feeds of the same game.
 
-## Make a DMG with the key baked in (on a Mac)
+## Build
 
-Needs Flutter 3.24+ and Xcode.
+Releases are built by GitHub Actions (`.github/workflows/apps.yml`): DMG, Windows
+installer + portable zip, Linux AppImage + tar.gz. Locally, on each platform:
 
 ```bash
-cp secrets.properties.example secrets.properties   # fill in htvSecret (git-ignored)
-./build_dmg.sh                                     # -> mac/Watchy.dmg
+flutter build macos   --release --dart-define=APP_VERSION=2.0.0   # or: ./build_dmg.sh 2.0.0
+flutter build windows --release --dart-define=APP_VERSION=2.0.0   # installer: packaging/installer.iss
+flutter build linux   --release --dart-define=APP_VERSION=2.0.0   # AppImage: packaging/build_appimage.sh 2.0.0
 ```
 
-Anyone with the DMG can extract the key, so only share it with people you trust. The app
-is ad-hoc signed, not notarized: the first time, right-click Watchy → **Open** (or System
-Settings → Privacy & Security → Open Anyway).
-
-Without `build_dmg.sh`, `flutter build macos --release` builds an app that asks for the key once.
+Linux needs `clang cmake ninja-build pkg-config libgtk-3-dev libmpv-dev`. Builds without
+`APP_VERSION` never offer updates. `--dart-define=AUTH_URL=` overrides the sign-in endpoint.
 
 `assets/public` is a symlink to the website's `public/` folder (logos and matchup art).
 

@@ -50,7 +50,7 @@ void main() {
       );
 
   for (final screen in ['home', 'guide']) {
-    testWidgets(screen, (t) async {
+    testWidgets(screen, tags: ['golden'], (t) async {
       t.view.physicalSize = const Size(2880, 1800);
       t.view.devicePixelRatio = 2;
       addTearDown(t.view.reset);

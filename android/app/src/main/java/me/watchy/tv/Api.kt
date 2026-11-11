@@ -5,18 +5,20 @@ import android.util.Xml
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.xmlpull.v1.XmlPullParser
 import java.util.Calendar
 import java.util.TimeZone
 import java.util.concurrent.TimeUnit
 
 class ApiException(msg: String) : Exception(msg)
+class AuthException(msg: String) : Exception(msg)
 
 /**
- * Talks straight to the stream server (HTV_BASE_URL/HTV_SECRET/...), the same
- * source the website's server reads. The secret is baked in at build time or
- * entered once on first launch.
+ * Signs in at the stream server's /auth/key endpoint (username + password -> stream
+ * base URL + key), then reads the playlist and guide straight from the stream server.
  */
 class Api(ctx: Context) {
     private val prefs = ctx.getSharedPreferences("watchy", Context.MODE_PRIVATE)
@@ -25,19 +27,42 @@ class Api(ctx: Context) {
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
-    val base: String get() = BuildConfig.HTV_BASE_URL.trimEnd('/')
+    val base: String get() = (prefs.getString("base", null) ?: "").trimEnd('/')
+    val secret: String get() = prefs.getString("secret", "") ?: ""
+    val username: String get() = prefs.getString("username", "") ?: ""
+    val signedIn get() = secret.isNotEmpty() && base.isNotEmpty() && prefs.contains("password")
 
-    var secret: String
-        get() = BuildConfig.HTV_SECRET.ifEmpty { prefs.getString("secret", "") ?: "" }
-        set(v) = prefs.edit().putString("secret", v.trim().trim('/')).apply()
+    fun signOut() = prefs.edit().remove("password").remove("secret").apply()
 
-    val configured get() = secret.isNotEmpty()
-    val secretBundled get() = BuildConfig.HTV_SECRET.isNotEmpty()
-    fun forgetSecret() = prefs.edit().remove("secret").apply()
+    /** Exchanges credentials for the stream key. Throws AuthException on 401. */
+    suspend fun login(user: String, pass: String) = withContext(Dispatchers.IO) {
+        val body = org.json.JSONObject().put("username", user).put("password", pass).toString()
+            .toRequestBody("application/json".toMediaType())
+        val req = Request.Builder().url(BuildConfig.AUTH_URL).post(body).build()
+        val r = try { http.newCall(req).execute() } catch (e: java.io.IOException) { throw ApiException("Can't reach the Watchy server") }
+        r.use {
+            val json = runCatching { org.json.JSONObject(it.body?.string().orEmpty()) }.getOrNull()
+            when {
+                it.code == 401 -> throw AuthException(json?.optString("error")?.ifEmpty { null } ?: "Invalid username or password.")
+                !it.isSuccessful -> throw ApiException(json?.optString("error")?.ifEmpty { null } ?: "Sign-in failed (${it.code})")
+            }
+            val sec = json?.optString("secret").orEmpty().trim('/')
+            val b = json?.optString("base").orEmpty().ifEmpty { BuildConfig.AUTH_URL.substringBefore("/auth/") }
+            if (sec.isEmpty()) throw ApiException("Server did not return a key")
+            prefs.edit().putString("username", user).putString("password", pass)
+                .putString("secret", sec).putString("base", b.trimEnd('/')).apply()
+        }
+    }
+
+    /** Re-checks the saved login. AuthException means the account was removed or changed. */
+    suspend fun refresh() {
+        val pass = prefs.getString("password", null) ?: throw AuthException("Signed out")
+        login(username, pass)
+    }
 
     private suspend fun fetch(file: String): String = withContext(Dispatchers.IO) {
         val req = try { Request.Builder().url("$base/$secret/$file").build() }
-                  catch (e: IllegalArgumentException) { throw ApiException("Invalid access key") }
+                  catch (e: IllegalArgumentException) { throw ApiException("Access key not accepted") }
         http.newCall(req).execute().use { r ->
             if (r.code == 401 || r.code == 403 || r.code == 404) throw ApiException("Access key not accepted (${r.code})")
             if (!r.isSuccessful) throw ApiException("Stream server error ${r.code}")
@@ -45,7 +70,14 @@ class Api(ctx: Context) {
         }
     }
 
-    suspend fun channels(): List<Channel> = parseM3U(fetch("playlist.m3u"))
+    suspend fun channels(): List<Channel> = try {
+        parseM3U(fetch("playlist.m3u"))
+    } catch (e: ApiException) {
+        // Key rotated on the server: sign in again with the saved login and retry once.
+        if (!e.message.orEmpty().startsWith("Access key")) throw e
+        refresh()
+        parseM3U(fetch("playlist.m3u"))
+    }
 
     suspend fun guide(): Guide = withContext(Dispatchers.Default) {
         val xml = fetch("guide.xml")

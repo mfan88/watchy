@@ -1,9 +1,10 @@
 # Watchy for Android TV / Google TV
 
-A native Android TV client for Watchy. It connects straight to the stream server
-(`HTV_BASE_URL/HTV_SECRET/playlist.m3u`, `guide.xml` and the `.m3u8` streams), the same
-source the website's server reads, so it does not need the Vercel site and has no sign-in.
-Team logos, provider logos and matchup art are bundled from `../public`.
+A native Android TV client for Watchy. Users sign in with a Watchy account at the stream
+server's `/auth/key` endpoint (see [docs/pi-auth-service.md](../docs/pi-auth-service.md)),
+which returns the stream key. The app then reads `playlist.m3u` and `guide.xml` and plays
+the streams straight from the stream server. No key is built into the APK. It re-checks
+the login on every launch and updates itself from the latest GitHub release.
 
 - **Home**: one row per live (or starting-soon) game. The big tile plays the first
   feed; the chips beside it jump straight into each feed (home/away feeds are labelled
@@ -16,19 +17,16 @@ Minimum Android 6.0 (API 23), so it runs on the Mi Box 3/3S.
 
 ## Build
 
-Needs JDK 17+ and the Android SDK (`sdk.dir` in `local.properties` or `ANDROID_HOME`).
+Releases are built by GitHub Actions (`.github/workflows/apps.yml`). Locally:
 
 ```bash
-cp secrets.properties.example secrets.properties   # then fill in htvSecret (same as HTV_SECRET)
-./gradlew assembleRelease
+./gradlew assembleRelease -PappVersion=2.0.0
 ```
 
-The secret is baked into the APK, so anyone who has the APK can extract it: share it
-only with people you'd give the stream server address to. Built without `htvSecret`,
-the app asks for the key once on first launch and remembers it.
-
-The APK is at `app/build/outputs/apk/release/app-release.apk` (signed with the debug
-key so it installs directly).
+Options: `-PauthUrl=` (default `https://tv.zuxi.me/auth/key`), `-PupdateRepo=` (default
+`mfan88/watchy`). For updates to install over an existing install, every release must be
+signed with the same key: CI uses `ANDROID_KEYSTORE_BASE64` / `ANDROID_KEYSTORE_PASSWORD`.
+Local builds use the debug key.
 
 ## Install on the Mi Box over adb
 

@@ -2,8 +2,8 @@
 # Builds the Tizen app into build/ and packages it as Watchy.wgt.
 #   ./package.sh                 -> build/Watchy.wgt (unsigned unless the Tizen CLI is installed)
 #   ./package.sh <profile>       -> signs with that Tizen Studio security profile
-# The access key comes from ../android/secrets.properties or tizen/secrets.properties
-# (htvSecret=..., htvBaseUrl=...). Without it the TV asks for the key on first launch.
+# Env: VERSION (e.g. 2.0.0), AUTH_URL, UPDATE_REPO. Also writes watchy-tizen-ota.json,
+# the over-the-air code update attached to each GitHub release.
 set -euo pipefail
 cd "$(dirname "$0")"
 OUT=build
@@ -32,20 +32,21 @@ else
   echo "Pillow not found: keeping WebP images (may not show on Tizen 2.4)"
 fi
 
-prop() { # prop <name> <default>
-  local v=""
-  for f in secrets.properties ../android/secrets.properties; do
-    [ -f "$f" ] && v=$(grep -E "^$1=" "$f" | tail -1 | cut -d= -f2- || true)
-    [ -n "$v" ] && break
-  done
-  echo "${v:-$2}"
-}
-SECRET=$(prop htvSecret "")
-BASE=$(prop htvBaseUrl "https://tv.zuxi.me")
-SECRET=${SECRET#/}; SECRET=${SECRET%/}
-node -e 'process.stdout.write("var WATCHY_CONFIG = " + JSON.stringify({ base: process.argv[1], secret: process.argv[2], img: process.argv[3] }) + ";\n")' "$BASE" "$SECRET" "$IMG_EXT" > "$OUT/js/config.js"
+# Version comes from $VERSION (CI passes the release tag); no stream key is built in.
+VERSION=${VERSION:-0.0.0}; VERSION=${VERSION#v}
+AUTH_URL=${AUTH_URL:-https://tv.zuxi.me/auth/key}
+UPDATE_REPO=${UPDATE_REPO:-mfan88/watchy}
+cp js/boot.js "$OUT/js/"
+node -e 'process.stdout.write("var WATCHY_CONFIG = " + JSON.stringify({ auth: process.argv[1], version: process.argv[2], repo: process.argv[3], img: process.argv[4] }) + ";\n")' "$AUTH_URL" "$VERSION" "$UPDATE_REPO" "$IMG_EXT" > "$OUT/js/config.js"
 node -e 'process.stdout.write("var WATCHY_MISSING = " + require("fs").readFileSync(process.argv[1], "utf8").trim() + ";\n")' ../src/lib/matchups-missing.json > "$OUT/js/missing.js"
-[ -n "$SECRET" ] && echo "Access key: baked in" || echo "Access key: not set (the TV will ask on first launch)"
+sed -i.bak "s/version=\"[0-9.]*\" viewmodes/version=\"$VERSION\" viewmodes/" "$OUT/config.xml" && rm -f "$OUT/config.xml.bak"
+# Over-the-air code update published with each release (see js/boot.js).
+node -e '
+const fs = require("fs");
+const css = fs.readFileSync(process.argv[2] + "/css/style.css", "utf8").replace(/url\(\.\.\//g, "url(");
+fs.writeFileSync(process.argv[3], JSON.stringify({ version: process.argv[1], js: fs.readFileSync(process.argv[2] + "/js/app.js", "utf8"), css }));
+' "$VERSION" "$OUT" watchy-tizen-ota.json
+echo "Version $VERSION"
 
 if command -v tizen >/dev/null 2>&1; then
   if [ $# -ge 1 ]; then tizen package -t wgt -s "$1" -- "$OUT" -o .

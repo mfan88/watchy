@@ -6,7 +6,7 @@
   var SLOT = 30 * 60000, SPAN = 6 * SLOT;
   var TEAMS = "ANA BOS BUF CAR CBJ CGY CHI COL DAL DET EDM FLA LAK MIN MTL NJD NSH NYI NYR OTT PHI PIT SEA SJS STL TBL TOR UTA VAN VGK WPG WSH".split(" ");
   var MISSING = window.WATCHY_MISSING || [];
-  var CFG = window.WATCHY_CONFIG || { base: "https://tv.zuxi.me", secret: "" };
+  var CFG = window.WATCHY_CONFIG || { auth: "https://tv.zuxi.me/auth/key" };
   var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, BACK: 10009, ESC: 27, BKSP: 8, CH_UP: 427, CH_DOWN: 428, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, STOP: 413, IME_DONE: 65376, IME_CANCEL: 65385 };
 
   // ---------- helpers ----------
@@ -29,18 +29,54 @@
   function store(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
   function load(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 
-  function secret() { return trim(CFG.secret) || load("watchy.secret") || ""; }
-  function bundled() { return !!trim(CFG.secret); }
+  // ---------- account: the stream server's /auth/key swaps username+password for the key ----------
+  function secret() { return load("watchy.secret") || ""; }
+  function base() { return (load("watchy.base") || "").replace(/\/+$/, ""); }
+  function signedIn() { return !!(secret() && base() && load("watchy.pass")); }
+  function signOut() { store("watchy.secret", null); store("watchy.pass", null); }
 
-  function get(path, cb) {
+  // cb(err, isAuthError)
+  function login(user, pass, cb) {
     var x = new XMLHttpRequest(), done = false;
-    x.open("GET", CFG.base.replace(/\/+$/, "") + "/" + secret() + "/" + path + "?t=" + Date.now(), true);
+    x.open("POST", CFG.auth, true);
+    x.setRequestHeader("Content-Type", "application/json");
+    x.timeout = 20000;
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4 || done) return;
+      done = true;
+      var j = null;
+      try { j = JSON.parse(x.responseText); } catch (e) {}
+      if (x.status === 200 && j && j.secret) {
+        store("watchy.user", user); store("watchy.pass", pass);
+        store("watchy.secret", String(j.secret).replace(/^\/+|\/+$/g, ""));
+        store("watchy.base", j.base || CFG.auth.split("/auth/")[0]);
+        cb(null);
+      } else if (x.status === 401) cb((j && j.error) || "Invalid username or password.", true);
+      else cb(x.status ? ((j && j.error) || "Sign-in failed (" + x.status + ")") : "Can't reach the Watchy server");
+    };
+    x.ontimeout = function () { if (!done) { done = true; cb("Can't reach the Watchy server"); } };
+    x.send(JSON.stringify({ username: user, password: pass }));
+  }
+  function relogin(cb) {
+    var p = load("watchy.pass");
+    if (!p) { cb("Signed out", true); return; }
+    login(load("watchy.user") || "", p, cb);
+  }
+
+  function get(path, cb, retried) {
+    var x = new XMLHttpRequest(), done = false;
+    if (!secret() || !base()) { cb("Access key not accepted"); return; }
+    x.open("GET", base() + "/" + secret() + "/" + path + "?t=" + Date.now(), true);
     x.timeout = 20000;
     x.onreadystatechange = function () {
       if (x.readyState !== 4 || done) return;
       done = true;
       if (x.status >= 200 && x.status < 300) cb(null, x.responseText);
-      else if (x.status === 401 || x.status === 403 || x.status === 404) cb("Access key not accepted (" + x.status + ")");
+      else if (x.status === 401 || x.status === 403 || x.status === 404) {
+        // Key rotated on the server: sign in again with the saved login and retry once.
+        if (retried) { cb("Access key not accepted (" + x.status + ")"); return; }
+        relogin(function (err, auth) { if (err) cb(auth ? "AUTH:" + err : err); else get(path, cb, true); });
+      }
       else cb(x.status ? "Stream server error " + x.status : "Can't reach the stream server");
     };
     x.ontimeout = function () { if (!done) { done = true; cb("Can't reach the stream server"); } };
@@ -221,7 +257,7 @@
   function refresh(first) {
     get("playlist.m3u", function (err, text) {
       if (err) {
-        if (!bundled() && err.indexOf("Access key") === 0) { store("watchy.secret", null); showSetup(err); return; }
+        if (err.indexOf("AUTH:") === 0) { signOut(); showSetup(err.slice(5)); return; }
         error = err; loaded = true; render(true); return;
       }
       channels = parseM3U(text); error = null;
@@ -448,24 +484,27 @@
     $("setup").className = "";
     $("setup-err").innerHTML = "";
     if (err) $("setup-err").appendChild(document.createTextNode(err));
-    setFocus($("key"));
+    $("user").value = load("watchy.user") || "";
+    setFocus($("user").value ? $("key") : $("user"));
   }
-  $("key").onfocusin2 = function () { /* native focus opens the TV keyboard on Enter */ };
+  $("user").onenter = function () { $("user").focus(); };
   $("key").onenter = function () { $("key").focus(); };
   $("setup-go").onenter = function () {
-    var v = trim($("key").value).replace(/^\/+|\/+$/g, "");
-    if (!v) { $("setup-err").innerHTML = "Enter the access key."; return; }
-    store("watchy.secret", v);
-    $("setup-go").innerHTML = "Checking…";
-    get("playlist.m3u", function (err) {
-      $("setup-go").innerHTML = "Continue";
-      if (err) { store("watchy.secret", null); $("setup-err").innerHTML = ""; $("setup-err").appendChild(document.createTextNode(err)); return; }
+    var u = trim($("user").value), p = $("key").value;
+    if (!u || !p) { $("setup-err").innerHTML = "Enter your username and password."; return; }
+    $("setup-go").innerHTML = "Signing in\u2026";
+    $("setup-err").innerHTML = "";
+    login(u, p, function (err) {
+      $("setup-go").innerHTML = "Sign in";
+      if (err) { $("setup-err").appendChild(document.createTextNode(err)); return; }
+      $("key").value = "";
       scope = "app";
       $("setup").className = "hidden";
       focused = null;
       start();
     });
   };
+  $("signout").onenter = function () { signOut(); showSetup(); };
 
   // ---------- player ----------
   var queue = [], qi = 0, osdTimer = null, av = null, video = null, playing = false;
@@ -548,9 +587,10 @@
       else if (k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) togglePause();
       return;
     }
-    if (scope === "setup" && document.activeElement === $("key")) {
-      if (k === KEY.IME_DONE || k === KEY.ENTER || k === KEY.DOWN) { $("key").blur(); setFocus($("setup-go")); ev.preventDefault(); }
-      else if (k === KEY.IME_CANCEL || k === KEY.BACK) { $("key").blur(); ev.preventDefault(); }
+    var act = document.activeElement;
+    if (scope === "setup" && (act === $("user") || act === $("key"))) {
+      if (k === KEY.IME_DONE || k === KEY.ENTER || k === KEY.DOWN) { act.blur(); setFocus(act === $("user") ? $("key") : $("setup-go")); ev.preventDefault(); }
+      else if (k === KEY.IME_CANCEL || k === KEY.BACK) { act.blur(); ev.preventDefault(); }
       return;
     }
     if (k >= KEY.LEFT && k <= KEY.DOWN) { ev.preventDefault(); move(k); return; }
@@ -588,5 +628,11 @@
   }
 
   window.WatchyTest = { parseM3U: parseM3U, parseXmltv: parseXmltv, buildGames: buildGames };
-  if (!secret()) showSetup(); else start();
+  if (!signedIn()) showSetup();
+  else {
+    start();
+    // Re-check the saved login on every launch: removed accounts are signed out,
+    // a rotated key is picked up. Offline is fine: keep the key we have.
+    relogin(function (err, auth) { if (auth) { signOut(); showSetup(err); } });
+  }
 })();

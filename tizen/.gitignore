@@ -5,3 +5,4 @@ secrets.properties
 .sign/
 author-signature.xml
 signature1.xml
+watchy-tizen-ota.json

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:media_kit/media_kit.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api.dart';
 import 'guide.dart';
@@ -7,10 +8,12 @@ import 'home.dart';
 import 'models.dart';
 import 'player.dart';
 import 'setup.dart';
+import 'updater.dart';
 import 'ui.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
   final api = Api(await SharedPreferences.getInstance());
   runApp(WatchyApp(api));
 }
@@ -23,7 +26,7 @@ class WatchyApp extends StatefulWidget {
 }
 
 class _WatchyAppState extends State<WatchyApp> {
-  late bool _ready = widget.api.secret.isNotEmpty;
+  late bool _ready = widget.api.signedIn;
   String? _setupError;
 
   @override
@@ -32,15 +35,15 @@ class _WatchyAppState extends State<WatchyApp> {
         debugShowCheckedModeBanner: false,
         theme: watchyTheme(),
         home: _ready
-            ? Shell(api: widget.api, onBadKey: (e) => setState(() { widget.api.forget(); _setupError = e; _ready = false; }))
+            ? Shell(api: widget.api, onSignOut: (e) => setState(() { widget.api.signOut(); _setupError = e; _ready = false; }))
             : SetupScreen(api: widget.api, error: _setupError, onDone: () => setState(() => _ready = true)),
       );
 }
 
 class Shell extends StatefulWidget {
   final Api api;
-  final ValueChanged<String> onBadKey;
-  const Shell({super.key, required this.api, required this.onBadKey});
+  final ValueChanged<String?> onSignOut;
+  const Shell({super.key, required this.api, required this.onSignOut});
   @override
   State<Shell> createState() => _ShellState();
 }
@@ -51,11 +54,16 @@ class _ShellState extends State<Shell> {
   List<Programme> _guide = const [];
   String? _error;
   Timer? _refresh, _tick;
+  Update? _update;
 
   @override
   void initState() {
     super.initState();
     _load();
+    // Re-check the saved login on every launch: removed accounts are signed out,
+    // a rotated key is picked up. Offline is fine: keep the key we have.
+    widget.api.refresh().catchError((Object e) { if (e is AuthException && mounted) widget.onSignOut(e.message); });
+    Updater.check().then((u) { if (mounted && u != null) setState(() => _update = u); });
     _refresh = Timer.periodic(const Duration(minutes: 2), (_) => _load());
     _tick = Timer.periodic(const Duration(seconds: 30), (_) => setState(() {}));
   }
@@ -74,9 +82,10 @@ class _ShellState extends State<Shell> {
       try { g = await widget.api.guide(); } catch (_) {}
       if (!mounted) return;
       setState(() { _channels = ch; _guide = g ?? _guide; _error = null; });
+    } on AuthException catch (e) {
+      if (mounted) widget.onSignOut(e.message);
     } on ApiException catch (e) {
       if (!mounted) return;
-      if (e.badKey && !Api.bundled) return widget.onBadKey(e.message);
       setState(() { _channels ??= const []; _error = e.message; });
     }
   }
@@ -121,12 +130,21 @@ class _ShellState extends State<Shell> {
             tab('Home', 0),
             tab('Guide', 1),
             const Spacer(),
+            if (_update != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 16),
+                child: FilledButton.icon(
+                  onPressed: () => installUpdate(context, _update!),
+                  style: FilledButton.styleFrom(backgroundColor: C.accent, foregroundColor: C.text),
+                  icon: const Icon(Icons.system_update_alt, size: 18),
+                  label: Text('Update to ${_update!.version}'),
+                ),
+              ),
             if (_error != null) Padding(padding: const EdgeInsets.only(right: 16), child: Text(_error!, style: const TextStyle(color: C.live, fontSize: 13))),
             Text(fmtTime(DateTime.now()), style: const TextStyle(color: C.dim, fontSize: 15)),
             const SizedBox(width: 8),
             IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh, color: C.dim, size: 20)),
-            if (!Api.bundled)
-              IconButton(tooltip: 'Change access key', onPressed: () => widget.onBadKey(''), icon: const Icon(Icons.key_outlined, color: C.dim, size: 20)),
+            IconButton(tooltip: 'Sign out', onPressed: () => widget.onSignOut(null), icon: const Icon(Icons.logout, color: C.dim, size: 20)),
           ]),
         ),
         Expanded(

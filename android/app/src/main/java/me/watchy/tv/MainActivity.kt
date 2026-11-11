@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
             isFocusable = true
         }
         val homeTab = pill("Home")
+        val signOut = pill("Sign out")
+        signOut.setOnClickListener { api.signOut(); toSetup(null) }
         val guideTab = pill("Guide")
         tabs = listOf(homeTab, guideTab)
         tabs.forEachIndexed { i, t ->
@@ -55,7 +57,8 @@ class MainActivity : AppCompatActivity() {
             addView(homeTab, lp().apply { marginEnd = dp(6) })
             addView(guideTab)
             addView(View(this@MainActivity), lp(0, 1).apply { weight = 1f })
-            addView(clock)
+            addView(clock, lp().apply { marginEnd = dp(20) })
+            addView(signOut)
         }
         content = FrameLayout(this)
         setContentView(LinearLayout(this).apply {
@@ -65,6 +68,7 @@ class MainActivity : AppCompatActivity() {
         })
         show(0)
         homeTab.requestFocus()
+        if (savedInstanceState == null) onCreatePostLogin()
     }
 
     private fun show(i: Int) {
@@ -79,6 +83,15 @@ class MainActivity : AppCompatActivity() {
     private fun render() {
         if (current == 0) home.bind(if (loaded) Games.build(channels, guide) else null)
         else guideView.bind(if (loaded) channels else null, guide)
+    }
+
+    private fun onCreatePostLogin() {
+        // Re-check the saved login on every launch: a removed account is signed out,
+        // a rotated key is picked up. Offline is fine: keep the key we have.
+        lifecycleScope.launch {
+            try { api.refresh() } catch (e: AuthException) { toSetup(e.message) } catch (_: Exception) {}
+        }
+        Updater.check(this)
     }
 
     override fun onStart() {
@@ -105,9 +118,9 @@ class MainActivity : AppCompatActivity() {
             guide = runCatching { api.guide() }.getOrNull() ?: guide
             loaded = true
             home.error = null
+        } catch (e: AuthException) {
+            toSetup(e.message); return
         } catch (e: ApiException) {
-            // A key typed on the TV that stopped working: ask again.
-            if (!api.secretBundled && e.message.orEmpty().startsWith("Access key")) { toSetup(e.message); return }
             loaded = true
             home.error = e.message
         } catch (e: Exception) {
@@ -127,7 +140,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun toSetup(error: String?) {
-        api.forgetSecret()
+        api.signOut()
         startActivity(Intent(this, SetupActivity::class.java).putExtra("error", error))
         finish()
     }

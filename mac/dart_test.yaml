@@ -1,0 +1,3 @@
+tags:
+  golden:
+    skip: "Screenshots depend on the clock; run with --run-skipped --update-goldens to re-render."

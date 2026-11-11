@@ -1,3 +1,2 @@
-// Filled in by package.sh from secrets.properties. Leave the secret empty to
-// have the TV ask for it once on first launch.
-var WATCHY_CONFIG = { base: "https://tv.zuxi.me", secret: "" };
+// Overwritten by package.sh. No stream key is ever built in: the app signs in.
+var WATCHY_CONFIG = { auth: "https://tv.zuxi.me/auth/key", version: "0.0.0", repo: "mfan88/watchy", img: "webp" };

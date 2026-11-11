@@ -1,5 +1,3 @@
-import java.util.Properties
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -14,17 +12,28 @@ android {
         applicationId = "me.watchy.tv"
         minSdk = 23
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
-        // Stream server connection, same values as the website's HTV_BASE_URL / HTV_SECRET.
-        // Put them in android/secrets.properties (never committed) or pass -PhtvSecret=...
-        val secrets = Properties().apply {
-            rootProject.file("secrets.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+        // Release builds pass -PappVersion=2.0.0 (from the git tag); local builds are 0.0.0-dev.
+        val ver = ((project.findProperty("appVersion") as String?) ?: "0.0.0").trimStart('v')
+        val nums = ver.split('.', '-').map { it.toIntOrNull() ?: 0 } + listOf(0, 0, 0)
+        versionCode = maxOf(1, nums[0] * 10000 + nums[1] * 100 + nums[2])
+        versionName = ver
+        // Where the app logs in and where it looks for updates. No key is built in.
+        val authUrl = (project.findProperty("authUrl") as String?) ?: "https://tv.zuxi.me/auth/key"
+        val updateRepo = (project.findProperty("updateRepo") as String?) ?: "mfan88/watchy"
+        buildConfigField("String", "AUTH_URL", "\"$authUrl\"")
+        buildConfigField("String", "UPDATE_REPO", "\"$updateRepo\"")
+    }
+
+    // A fixed signing key is required so updates install over the previous version.
+    // CI provides it via environment variables; local builds fall back to the debug key.
+    val ks = System.getenv("ANDROID_KEYSTORE_FILE")
+    signingConfigs {
+        if (ks != null) create("release") {
+            storeFile = file(ks)
+            storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            keyAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "watchy"
+            keyPassword = System.getenv("ANDROID_KEY_PASSWORD") ?: System.getenv("ANDROID_KEYSTORE_PASSWORD")
         }
-        fun setting(name: String, default: String = "") =
-            ((project.findProperty(name) as String?) ?: secrets.getProperty(name) ?: default).trim()
-        buildConfigField("String", "HTV_BASE_URL", "\"${setting("htvBaseUrl", "https://tv.zuxi.me")}\"")
-        buildConfigField("String", "HTV_SECRET", "\"${setting("htvSecret").trim('/')}\"")
     }
 
     buildFeatures { buildConfig = true }
@@ -35,8 +44,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Signed with the debug key so the APK installs straight over adb.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

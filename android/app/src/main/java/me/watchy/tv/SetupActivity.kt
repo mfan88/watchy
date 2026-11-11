@@ -13,26 +13,29 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 
-/** Only shown when the APK was built without the access key: asks for it once. */
+/** Sign in with a Watchy account; the server hands back the stream key. */
 class SetupActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val api = api
-        val key = EditText(this).apply {
-            hint = "Access key"
-            setText(api.secret)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+        fun field(hint: String, type: Int) = EditText(this).apply {
+            this.hint = hint
+            inputType = type
             isSingleLine = true
             setTextColor(color(R.color.text))
             setHintTextColor(color(R.color.text_faint))
             textSize = 18f
             setBackgroundResource(R.drawable.input_bg)
             setPadding(dp(18), dp(14), dp(18), dp(14))
+            imeOptions = EditorInfo.IME_ACTION_NEXT or EditorInfo.IME_FLAG_NO_EXTRACT_UI
+        }
+        val user = field("Username", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS).apply { setText(api.username) }
+        val key = field("Password", InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD).apply {
             imeOptions = EditorInfo.IME_ACTION_DONE or EditorInfo.IME_FLAG_NO_EXTRACT_UI
         }
         val error = text(intent.getStringExtra("error") ?: "", 15f, R.color.live).apply { gravity = Gravity.CENTER }
         val submit = Button(this).apply {
-            text = "Continue"
+            text = "Sign in"
             isAllCaps = false
             textSize = 18f
             setTextColor(color(R.color.text))
@@ -41,22 +44,19 @@ class SetupActivity : AppCompatActivity() {
         }
 
         fun go() {
-            val v = key.text.toString().trim().trim('/')
-            if (v.isEmpty()) { error.text = "Enter the access key."; return }
-            api.secret = v
+            if (user.text.isBlank() || key.text.isEmpty()) { error.text = "Enter your username and password."; return }
             submit.isEnabled = false
-            submit.text = "Checking…"
+            submit.text = "Signing in…"
             error.text = ""
             lifecycleScope.launch {
                 try {
-                    api.channels()
+                    api.login(user.text.toString().trim(), key.text.toString())
                     startActivity(Intent(this@SetupActivity, MainActivity::class.java))
                     finish()
                 } catch (e: Exception) {
-                    api.forgetSecret()
-                    error.text = (e as? ApiException)?.message ?: "Can't reach the stream server. Check the network."
+                    error.text = e.message ?: "Sign-in failed"
                     submit.isEnabled = true
-                    submit.text = "Continue"
+                    submit.text = "Sign in"
                     key.requestFocus()
                 }
             }
@@ -70,13 +70,14 @@ class SetupActivity : AppCompatActivity() {
             setPadding(dp(40), dp(36), dp(40), dp(36))
             setBackgroundResource(R.drawable.panel_bg)
             addView(Wordmark.view(this@SetupActivity, 40f), lp().apply { bottomMargin = dp(6) })
-            addView(text("Enter the stream server access key (HTV_SECRET)", 16f, R.color.text_dim), lp().apply { bottomMargin = dp(28) })
+            addView(text("Sign in with your Watchy account", 16f, R.color.text_dim), lp().apply { bottomMargin = dp(28) })
             val w = dp(460)
+            addView(user, lp(w).apply { bottomMargin = dp(14) })
             addView(key, lp(w).apply { bottomMargin = dp(14) })
             addView(error, lp(w).apply { bottomMargin = dp(10) })
             addView(submit, lp(w, dp(56)))
         }
         setContentView(FrameLayout(this).apply { addView(col, FrameLayout.LayoutParams(WRAP, WRAP, Gravity.CENTER)) })
-        key.requestFocus()
+        (if (api.username.isEmpty()) user else key).requestFocus()
     }
 }

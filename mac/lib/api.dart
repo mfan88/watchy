@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
@@ -10,23 +11,61 @@ class ApiException implements Exception {
   String toString() => message;
 }
 
-/// Reads the playlist and guide straight from the stream server, the same
-/// source the website's server reads. The key is baked in with
-/// --dart-define=HTV_SECRET=... or entered once in the app.
+class AuthException extends ApiException {
+  AuthException(super.message);
+}
+
+/// Signs in at the stream server's /auth/key endpoint (username + password ->
+/// stream base URL + key), then reads the playlist and guide straight from the
+/// stream server. No key is built into the app.
 class Api {
-  static const _bundledSecret = String.fromEnvironment('HTV_SECRET');
-  static const base = String.fromEnvironment('HTV_BASE_URL', defaultValue: 'https://tv.zuxi.me');
-  static bool get bundled => _bundledSecret.isNotEmpty;
+  static const authUrl = String.fromEnvironment('AUTH_URL', defaultValue: 'https://tv.zuxi.me/auth/key');
 
   final SharedPreferences prefs;
   Api(this.prefs);
 
-  String get secret => bundled ? _bundledSecret : (prefs.getString('secret') ?? '');
-  set secret(String v) => prefs.setString('secret', v.trim().replaceAll(RegExp(r'^/+|/+$'), ''));
-  void forget() => prefs.remove('secret');
+  String get secret => prefs.getString('secret') ?? '';
+  String get base => (prefs.getString('base') ?? '').replaceAll(RegExp(r'/+$'), '');
+  String get username => prefs.getString('username') ?? '';
+  bool get signedIn => secret.isNotEmpty && base.isNotEmpty && prefs.containsKey('password');
+
+  void signOut() {
+    prefs.remove('secret');
+    prefs.remove('password');
+  }
+
+  Future<void> login(String user, String pass) async {
+    http.Response r;
+    try {
+      r = await http
+          .post(Uri.parse(authUrl), headers: {'Content-Type': 'application/json'}, body: jsonEncode({'username': user, 'password': pass}))
+          .timeout(const Duration(seconds: 20));
+    } catch (_) {
+      throw ApiException("Can't reach the Watchy server");
+    }
+    Map<String, dynamic>? j;
+    try { j = jsonDecode(utf8.decode(r.bodyBytes)) as Map<String, dynamic>; } catch (_) {}
+    final err = j?['error'] is String ? j!['error'] as String : null;
+    if (r.statusCode == 401) throw AuthException(err ?? 'Invalid username or password.');
+    if (r.statusCode != 200) throw ApiException(err ?? 'Sign-in failed (${r.statusCode})');
+    final sec = (j?['secret'] as String? ?? '').replaceAll(RegExp(r'^/+|/+$'), '');
+    if (sec.isEmpty) throw ApiException('Server did not return a key');
+    final b = (j?['base'] as String?) ?? authUrl.split('/auth/').first;
+    await prefs.setString('username', user);
+    await prefs.setString('password', pass);
+    await prefs.setString('secret', sec);
+    await prefs.setString('base', b);
+  }
+
+  /// Re-checks the saved login. AuthException: the account was removed or changed.
+  Future<void> refresh() async {
+    final p = prefs.getString('password');
+    if (p == null) throw AuthException('Signed out');
+    await login(username, p);
+  }
 
   Future<String> _get(String file) async {
-    final uri = Uri.tryParse('${base.replaceAll(RegExp(r'/+$'), '')}/$secret/$file');
+    final uri = Uri.tryParse('$base/$secret/$file');
     if (uri == null) throw ApiException('Access key not accepted');
     http.Response r;
     try {
@@ -38,10 +77,19 @@ class Api {
       throw ApiException('Access key not accepted (${r.statusCode})');
     }
     if (r.statusCode >= 300) throw ApiException('Stream server error ${r.statusCode}');
-    return r.body;
+    // The server sends no charset; the files are UTF-8 (" · " separators).
+    return utf8.decode(r.bodyBytes, allowMalformed: true);
   }
 
-  Future<List<Channel>> channels() async => parseM3U(await _get('playlist.m3u'));
+  Future<List<Channel>> channels() async {
+    try {
+      return parseM3U(await _get('playlist.m3u'));
+    } on ApiException catch (e) {
+      if (!e.badKey) rethrow;
+      await refresh(); // key rotated on the server: sign in again, retry once
+      return parseM3U(await _get('playlist.m3u'));
+    }
+  }
   Future<List<Programme>> guide() async => parseXmltv(await _get('guide.xml'));
 }
 

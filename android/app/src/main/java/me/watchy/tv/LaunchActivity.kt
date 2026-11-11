@@ -7,7 +7,7 @@ import android.os.Bundle
 class LaunchActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        startActivity(Intent(this, if (api.configured) MainActivity::class.java else SetupActivity::class.java))
+        startActivity(Intent(this, if (api.signedIn) MainActivity::class.java else SetupActivity::class.java))
         finish()
     }
 }

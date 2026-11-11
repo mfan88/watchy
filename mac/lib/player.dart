@@ -1,7 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:video_player/video_player.dart';
+import 'package:media_kit/media_kit.dart';
+import 'package:media_kit_video/media_kit_video.dart';
 import 'models.dart';
 import 'ui.dart';
 
@@ -16,9 +17,11 @@ class PlayerScreen extends StatefulWidget {
 
 class _PlayerScreenState extends State<PlayerScreen> {
   late int _i = widget.index;
-  VideoPlayerController? _vc;
+  late final Player _player = Player(configuration: const PlayerConfiguration(title: 'Watchy'));
+  late final VideoController _video = VideoController(_player);
+  final _subs = <StreamSubscription>[];
   String? _error;
-  bool _osd = true;
+  bool _osd = true, _buffering = true, _playing = false, _started = false, _retried = false;
   Timer? _hide;
   final _focus = FocusNode();
 
@@ -27,37 +30,36 @@ class _PlayerScreenState extends State<PlayerScreen> {
   @override
   void initState() {
     super.initState();
+    _subs.addAll([
+      _player.stream.buffering.listen((v) { if (mounted) setState(() => _buffering = v); }),
+      _player.stream.playing.listen((v) { if (mounted) setState(() => _playing = v); }),
+      // Picture on screen: playback works, so drop any earlier (recoverable) error.
+      _player.stream.width.listen((w) { if (mounted && (w ?? 0) > 0) setState(() { _started = true; _error = null; }); }),
+      _player.stream.position.listen((p) { if (mounted && p > Duration.zero && !_started) setState(() { _started = true; _error = null; }); }),
+      // mpv also reports minor, recoverable errors: only surface them while there is no picture.
+      _player.stream.error.listen((e) {
+        if (!mounted || _started) return;
+        // A live stream that is just starting often fails once: retry quietly first.
+        if (!_retried) { _retried = true; Future.delayed(const Duration(seconds: 2), () { if (mounted && !_started) _player.open(Media(_ch.url)); }); return; }
+        setState(() => _error = 'Stream unavailable · press Enter to retry');
+      }),
+    ]);
     _tune();
   }
 
   @override
   void dispose() {
     _hide?.cancel();
-    _vc?.dispose();
+    for (final s in _subs) { s.cancel(); }
+    _player.dispose();
     _focus.dispose();
     super.dispose();
   }
 
   Future<void> _tune() async {
-    final old = _vc;
-    final vc = VideoPlayerController.networkUrl(Uri.parse(_ch.url), formatHint: VideoFormat.hls);
-    setState(() { _vc = vc; _error = null; });
+    setState(() { _error = null; _started = false; _buffering = true; _retried = false; });
     _showOsd();
-    await old?.dispose();
-    try {
-      await vc.initialize();
-      if (!mounted || _vc != vc) return;
-      vc.addListener(_onTick);
-      await vc.play();
-      setState(() {});
-    } catch (_) {
-      if (mounted && _vc == vc) setState(() => _error = 'This stream has ended or is unavailable');
-    }
-  }
-
-  void _onTick() {
-    final v = _vc?.value;
-    if (v != null && v.hasError && _error == null && mounted) setState(() => _error = 'Playback error · press Enter to retry');
+    await _player.open(Media(_ch.url));
   }
 
   void _showOsd() {
@@ -73,9 +75,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   void _togglePause() {
-    final vc = _vc;
-    if (vc == null || !vc.value.isInitialized) return;
-    vc.value.isPlaying ? vc.pause() : vc.play();
+    _player.playOrPause();
     _showOsd();
   }
 
@@ -93,8 +93,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final vc = _vc;
-    final ready = vc != null && vc.value.isInitialized;
+    final ready = _started && _error == null;
     final sameGame = widget.queue.where((c) => c.game == _ch.game).toList();
     return Scaffold(
       backgroundColor: Colors.black,
@@ -108,9 +107,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
           child: GestureDetector(
             onTap: _togglePause,
             child: Stack(fit: StackFit.expand, children: [
-              if (ready) Center(child: AspectRatio(aspectRatio: vc.value.aspectRatio, child: VideoPlayer(vc))),
-              if (!ready && _error == null) const Center(child: CircularProgressIndicator(color: C.text)),
-              if (ready && vc.value.isBuffering) const Center(child: CircularProgressIndicator(color: C.text)),
+              Video(controller: _video, controls: NoVideoControls, fill: Colors.black),
+              if (_error == null && (!ready || _buffering)) const Center(child: CircularProgressIndicator(color: C.text)),
               AnimatedOpacity(
                 opacity: _osd || _error != null ? 1 : 0,
                 duration: const Duration(milliseconds: 250),
@@ -132,7 +130,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
                         ]),
                       ),
                       if (ready)
-                        IconButton(tooltip: 'Play/Pause (Space)', onPressed: _togglePause, icon: Icon(vc.value.isPlaying ? Icons.pause : Icons.play_arrow, color: C.text)),
+                        IconButton(tooltip: 'Play/Pause (Space)', onPressed: _togglePause, icon: Icon(_playing ? Icons.pause : Icons.play_arrow, color: C.text)),
                     ]),
                   ),
                   if (sameGame.length > 1)

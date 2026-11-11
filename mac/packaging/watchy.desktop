@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Watchy
+Comment=Watch live games
+Exec=watchy
+Icon=watchy
+Categories=AudioVideo;Video;Player;
+Terminal=false
