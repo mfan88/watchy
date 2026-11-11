@@ -112,6 +112,17 @@ jobs:
           echo "$HOME/tizen-studio/tools/ide/bin" >> "$GITHUB_PATH"
           "$HOME/tizen-studio/tools/ide/bin/tizen" security-profiles add -n watchy \
             -a "$RUNNER_TEMP/author.p12" -p "$AUTHOR_PW" -d "$RUNNER_TEMP/distributor.p12" -dp "$DIST_PW"
+          # The CLI saves the passwords encrypted with a desktop keyring that CI runners don't
+          # have, so it reads them back wrong ("Invalid password"). Clear them so it asks
+          # instead; the Package step answers its prompts.
+          python3 - "$HOME/tizen-studio-data/profile/profiles.xml" <<'PY'
+          import sys, xml.etree.ElementTree as ET
+          p = sys.argv[1]; tree = ET.parse(p)
+          for item in tree.iter("profileitem"):
+              if item.get("key"):
+                  item.set("password", "")
+          tree.write(p, encoding="UTF-8", xml_declaration=True)
+          PY
           echo "signed=true" >> "$GITHUB_OUTPUT"
       - name: Package
         working-directory: tizen
@@ -124,11 +135,12 @@ jobs:
             # they're in the profile; expect gives it one and answers the prompts.
             sudo apt-get install -y -q expect >/dev/null
             expect -c '
-              set timeout 600
+              set timeout 300
               spawn ./package.sh watchy
               expect {
                 -nocase -re {author[^\n]*password:} { send -- "$env(AUTHOR_PW)\r"; exp_continue }
                 -nocase -re {distributor[^\n]*password:} { send -- "$env(DIST_PW)\r"; exp_continue }
+                -nocase -re {password:} { send -- "$env(DIST_PW)\r"; exp_continue }
                 eof
               }
               catch wait result
