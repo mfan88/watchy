@@ -92,6 +92,20 @@ jobs:
           fi
           echo "$AUTHOR" | base64 -d > "$RUNNER_TEMP/author.p12"
           echo "$DIST" | base64 -d > "$RUNNER_TEMP/distributor.p12"
+          # Say exactly which secret is wrong instead of the Tizen CLI's generic "Invalid password".
+          bad=0
+          for c in "author:AUTHOR_PW:TIZEN_AUTHOR" "distributor:DIST_PW:TIZEN_DISTRIBUTOR"; do
+            IFS=: read -r name var secret <<< "$c"
+            f="$RUNNER_TEMP/$name.p12"
+            if ! head -c 2 "$f" | od -An -tx1 | grep -q "30 8"; then
+              echo "::error::${secret}_P12_BASE64 does not decode to a .p12 file (re-encode it with: base64 -i $name.p12 | pbcopy)"; bad=1
+            elif ! openssl pkcs12 -in "$f" -passin "env:$var" -noout 2>/dev/null && ! openssl pkcs12 -legacy -in "$f" -passin "env:$var" -noout 2>/dev/null; then
+              echo "::error::${secret}_PASSWORD does not open ${secret}_P12_BASE64 ($name.p12)"; bad=1
+            else
+              echo "$name certificate and password OK"
+            fi
+          done
+          [ "$bad" = 0 ] || exit 1
           curl -fsSL -o "$RUNNER_TEMP/tizen-cli.bin" https://download.tizen.org/sdk/Installer/tizen-studio_6.1/web-cli_Tizen_Studio_6.1_ubuntu-64.bin
           chmod +x "$RUNNER_TEMP/tizen-cli.bin"
           "$RUNNER_TEMP/tizen-cli.bin" --accept-license "$HOME/tizen-studio"
