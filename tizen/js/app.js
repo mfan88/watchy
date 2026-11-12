@@ -522,9 +522,41 @@
     tune();
   }
 
+  // Auto-recovery: the server's HLS muxer restarts when an upstream mirror hiccups
+  // (same URL, back within ~1-2 s). Retry quietly instead of showing an error.
+  var BACKOFF = [0, 1000, 2000, 4000, 5000], RETRY_WINDOW = 60000, STABLE_MS = 10000;
+  var attempt = 0, retryStart = 0, retryTimer = null, stableTimer = null, gen = 0;
+
+  function resetRetries() { clearTimeout(retryTimer); clearTimeout(stableTimer); retryTimer = null; attempt = 0; }
+
+  function failed(c, myGen, reason) {
+    if (myGen !== gen || !playing) return;   // stale callback: user left or changed channel
+    clearTimeout(stableTimer);
+    var now = Date.now();
+    if (attempt === 0) retryStart = now;
+    if (now - retryStart > RETRY_WINDOW) {
+      $("spinner").style.display = "none";
+      osd(c.game, "Stream unavailable · press OK to retry", true);
+      return;
+    }
+    var wait = BACKOFF[Math.min(attempt, BACKOFF.length - 1)];
+    attempt++;
+    try { console.log("watchy: auto-retry #" + attempt + " in " + wait + "ms (" + reason + ")"); } catch (e) {}
+    $("spinner").style.display = "";
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(function () { retryTimer = null; if (myGen === gen && playing) open(c, true); }, wait);
+  }
+
   function tune() {
-    var c = queue[qi];
+    resetRetries();
+    open(queue[qi], false);
+  }
+
+  function open(c, retry) {
+    var myGen = ++gen;
+    if (!retry) {
     osd(c.game, c.provider + (queue.length > 1 ? "  ·  " + (qi + 1) + "/" + queue.length + "  ·  ▲▼ change stream" : ""), false);
+    }
     $("spinner").style.display = "";
     if (av) {
       try { av.stop(); av.close(); } catch (e) {}
@@ -533,13 +565,18 @@
         av.setDisplayRect(0, 0, 1920, 1080);
         av.setListener({
           onbufferingstart: function () { $("spinner").style.display = ""; },
-          onbufferingcomplete: function () { $("spinner").style.display = "none"; },
-          onstreamcompleted: function () { tune(); },
-          onerror: function (e) { $("spinner").style.display = "none"; osd(c.game, "Stream unavailable · press OK to retry", true); }
+          onbufferingcomplete: function () { if (!retryTimer) $("spinner").style.display = "none"; },
+          onstreamcompleted: function () { failed(c, myGen, "source ended"); },
+          onerror: function (e) { failed(c, myGen, "error " + e); }
         });
-        av.prepareAsync(function () { $("spinner").style.display = "none"; av.play(); },
-          function () { $("spinner").style.display = "none"; osd(c.game, "Stream unavailable · press OK to retry", true); });
-      } catch (e) { $("spinner").style.display = "none"; osd(c.game, "Stream unavailable · press OK to retry", true); }
+        av.prepareAsync(function () {
+            if (myGen !== gen) return;
+            $("spinner").style.display = "none"; av.play();
+            clearTimeout(stableTimer);
+            stableTimer = setTimeout(function () { if (myGen === gen) attempt = 0; }, STABLE_MS);
+          },
+          function (e) { failed(c, myGen, "prepare failed " + ((e && e.name) || "")); });
+      } catch (e) { failed(c, myGen, "open failed " + (e && e.name)); }
     } else {
       // Desktop browser preview only (Safari plays HLS natively).
       if (!video) { video = el("video"); video.style.cssText = "position:absolute;left:0;top:0;width:1920px;height:1080px;background:#000"; video.autoplay = true; $("player").insertBefore(video, $("player").firstChild); }
@@ -550,6 +587,7 @@
 
   function stop() {
     playing = false;
+    gen++; resetRetries();
     if (av) { try { av.stop(); av.close(); } catch (e) {} }
     if (video) { video.removeAttribute("src"); try { video.load(); } catch (e) {} }
     $("player").className = "hidden";
@@ -583,7 +621,7 @@
       if (k === KEY.BACK || k === KEY.ESC || k === KEY.STOP || k === KEY.BKSP) stop();
       else if (k === KEY.UP || k === KEY.CH_UP) { if (queue.length > 1) { qi = (qi - 1 + queue.length) % queue.length; tune(); } }
       else if (k === KEY.DOWN || k === KEY.CH_DOWN) { if (queue.length > 1) { qi = (qi + 1) % queue.length; tune(); } }
-      else if (k === KEY.ENTER) { if (hasClass($("osd"), "off")) osd($("osd-title").textContent, $("osd-sub").textContent, false); else tune(); }
+      else if (k === KEY.ENTER) { if (hasClass($("osd"), "off")) osd($("osd-title").textContent, $("osd-sub").textContent, false); else if (!retryTimer) tune(); }
       else if (k === KEY.PLAYPAUSE || k === KEY.PLAY || k === KEY.PAUSE) togglePause();
       return;
     }
