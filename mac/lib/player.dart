@@ -21,8 +21,16 @@ class _PlayerScreenState extends State<PlayerScreen> {
   late final VideoController _video = VideoController(_player);
   final _subs = <StreamSubscription>[];
   String? _error;
-  bool _osd = true, _buffering = true, _playing = false, _started = false, _retried = false;
+  bool _osd = true, _buffering = true, _playing = false, _started = false;
   Timer? _hide;
+
+  // Auto-recovery: the server's HLS muxer restarts when an upstream mirror hiccups
+  // (same URL, back within ~1–2 s). Retry quietly instead of showing an error.
+  static const _backoff = [0, 1000, 2000, 4000, 5000];
+  static const _window = Duration(seconds: 60), _stableAfter = Duration(seconds: 10);
+  int _attempt = 0;
+  DateTime? _retryStart;
+  Timer? _retry, _stable;
   final _focus = FocusNode();
 
   Channel get _ch => widget.queue[_i];
@@ -36,19 +44,40 @@ class _PlayerScreenState extends State<PlayerScreen> {
       // Picture on screen: playback works, so drop any earlier (recoverable) error.
       _player.stream.width.listen((w) { if (mounted && (w ?? 0) > 0) setState(() { _started = true; _error = null; }); }),
       _player.stream.position.listen((p) { if (mounted && p > Duration.zero && !_started) setState(() { _started = true; _error = null; }); }),
-      // mpv also reports minor, recoverable errors: only surface them while there is no picture.
-      _player.stream.error.listen((e) {
-        if (!mounted || _started) return;
-        // A live stream that is just starting often fails once: retry quietly first.
-        if (!_retried) { _retried = true; Future.delayed(const Duration(seconds: 2), () { if (mounted && !_started) _player.open(Media(_ch.url)); }); return; }
-        setState(() => _error = 'Stream unavailable · press Enter to retry');
+      // Reset the retry budget after 10 s of steady playback.
+      _player.stream.playing.listen((v) {
+        _stable?.cancel();
+        if (v) _stable = Timer(_stableAfter, () { _attempt = 0; _retryStart = null; });
       }),
+      // mpv also reports minor errors mid-play; only act when playback has actually stalled.
+      _player.stream.error.listen((e) { if (!_started || !_playing || _buffering) _scheduleRetry('error: $e'); }),
+      // A live stream never ends on its own: the source dropped.
+      _player.stream.completed.listen((done) { if (done) _scheduleRetry('source ended'); }),
     ]);
     _tune();
   }
 
+  void _scheduleRetry(String reason) {
+    if (!mounted || _retry?.isActive == true || _error != null) return;
+    _stable?.cancel();
+    final now = DateTime.now();
+    _retryStart ??= now;
+    if (now.difference(_retryStart!) > _window) {
+      setState(() { _error = 'Stream unavailable · press Enter to retry'; _buffering = false; });
+      return;
+    }
+    final wait = _backoff[_attempt.clamp(0, _backoff.length - 1)];
+    _attempt++;
+    debugPrint('watchy: auto-retry #$_attempt in ${wait}ms (${reason.split('\n').first.replaceAll(RegExp(r'https?://\S+'), '<url>')})');
+    setState(() => _buffering = true);
+    _retry = Timer(Duration(milliseconds: wait), () { if (mounted) _player.open(Media(_ch.url)); });
+  }
+
+  void _resetRetries() { _retry?.cancel(); _stable?.cancel(); _attempt = 0; _retryStart = null; }
+
   @override
   void dispose() {
+    _resetRetries();
     _hide?.cancel();
     for (final s in _subs) { s.cancel(); }
     _player.dispose();
@@ -57,7 +86,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
   }
 
   Future<void> _tune() async {
-    setState(() { _error = null; _started = false; _buffering = true; _retried = false; });
+    _resetRetries();
+    setState(() { _error = null; _started = false; _buffering = true; });
     _showOsd();
     await _player.open(Media(_ch.url));
   }
