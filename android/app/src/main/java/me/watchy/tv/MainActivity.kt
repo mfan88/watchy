@@ -91,11 +91,11 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             try { api.refresh() } catch (e: AuthException) { toSetup(e.message) } catch (_: Exception) {}
         }
-        Updater.check(this)
     }
 
     override fun onStart() {
         super.onStart()
+        Updater.check(this)
         refresh = lifecycleScope.launch {
             var n = 0
             while (isActive) {

@@ -53,8 +53,19 @@
     x.send();
   }
 
-  // Check for a newer release a little after start-up.
-  setTimeout(function () {
+  // Check a little after start-up, whenever the app comes back to the foreground
+  // (TVs suspend apps rather than closing them), and every 6 hours while open.
+  var lastCheck = 0;
+  function maybeCheck() {
+    if (Date.now() - lastCheck < 15 * 60000) return;
+    lastCheck = Date.now();
+    check();
+  }
+  setTimeout(maybeCheck, 8000);
+  setInterval(maybeCheck, 6 * 3600000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) setTimeout(maybeCheck, 3000); });
+
+  function check() {
     if (!CFG.repo) return;
     get("https://api.github.com/repos/" + CFG.repo + "/releases/latest", function (txt) {
       if (!txt) return;
@@ -71,5 +82,5 @@
         if (window.WatchyUpdated) window.WatchyUpdated(pkg.version);
       });
     });
-  }, 8000);
+  }
 })();
