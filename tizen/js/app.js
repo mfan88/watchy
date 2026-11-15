@@ -83,6 +83,55 @@
     x.send();
   }
 
+  // ---------- stream format: MPEG-TS or fMP4 HLS ----------
+  //   MPEG-TS: {base}/{secret}/ch_xxx/index.m3u8   (what playlist.m3u lists)
+  //   fMP4:    {base}/{secret}/fmp4/ch_xxx/index.m3u8
+  var FORMATS = { auto: "Auto", fmp4: "fMP4", ts: "MPEG-TS" };
+  var HINTS = {
+    auto: "Picks the best format for this TV and switches if a channel won't start.",
+    fmp4: "Fragmented MP4 HLS. Plays channels with more than one audio track.",
+    ts: "Classic HLS. Channels with more than one audio track won't play."
+  };
+  var DEBUG = CFG.version === "0.0.0" || load("watchy.debug") === "1";
+  function dbg(m) { if (DEBUG) { try { console.log("watchy: " + m); } catch (e) {} } }
+
+  function formatSetting() { var v = load("watchy.format"); return FORMATS[v] ? v : "auto"; }
+
+  // Tizen platform version: 2.4 (2016), 3.0 (2017), 4.0 (2018), 5.0 (2019), ... 0 = unknown.
+  var tizenVer = (function () {
+    var v = null;
+    try { v = tizen.systeminfo.getCapability("http://tizen.org/feature/platform.version"); } catch (e) {}
+    var n = parseFloat(v);
+    if (!isNaN(n)) return n;
+    var m = (navigator.userAgent || "").match(/Tizen\s*(\d+(?:\.\d+)?)/i);
+    return m ? parseFloat(m[1]) : 0;
+  })();
+
+  // Auto's first choice, the one table to change. AVPlay on Tizen 4.0+ (2018+ TVs) plays
+  // fMP4 HLS with EXT-X-MAP and multiple audio renditions; older or unknown: MPEG-TS.
+  // (Android: android/.../Streams.kt, desktop: mac/lib/streams.dart.)
+  function preferredFormat(ver) { return ver >= 4 ? "fmp4" : "ts"; }
+
+  var working = {}; // channel slug -> format that worked this session (Auto only)
+
+  function chooseFormat(slug) {
+    var s = formatSetting();
+    if (s !== "auto") return [s, "setting"];
+    if (working[slug]) return [working[slug], "worked earlier this session"];
+    return [preferredFormat(tizenVer), "platform default (Tizen " + (tizenVer || "unknown") + ")"];
+  }
+
+  // Only {base}/{secret}/ch_xxx/... URLs are rewritten.
+  function streamUrl(tsUrl, fmt, key) {
+    if (fmt !== "fmp4" || !key) return tsUrl;
+    var m = tsUrl.match(/^([a-zA-Z][\w+.-]*:\/\/[^\/?#]*)(\/[^?#]*)(.*)$/);
+    if (!m) return tsUrl;
+    var prefix = "/" + key + "/", path = m[2];
+    if (path.indexOf(prefix) !== 0 || !/^ch_[0-9a-f]+\//.test(path.slice(prefix.length))) return tsUrl;
+    return m[1] + prefix + "fmp4/" + path.slice(prefix.length) + m[3];
+  }
+  function channelKey(url) { var m = url.match(/\/(ch_[0-9a-f]+)\//); return m ? m[1] : url.split("/").pop(); }
+
   // ---------- parsing (same rules as the website) ----------
   function parseM3U(text) {
     var out = [], lines = text.split(/\r?\n/), i, j, m;
@@ -252,7 +301,7 @@
   }
 
   // ---------- state ----------
-  var channels = [], programmes = [], loaded = false, error = null, tab = "home", lastSig = "";
+  var channels = [], programmes = [], loaded = false, error = null, tab = "home", lastSig = "", keyAtLoad = "";
 
   function refresh(first) {
     get("playlist.m3u", function (err, text) {
@@ -260,7 +309,7 @@
         if (err.indexOf("AUTH:") === 0) { signOut(); showSetup(err.slice(5)); return; }
         error = err; loaded = true; render(true); return;
       }
-      channels = parseM3U(text); error = null;
+      channels = parseM3U(text); error = null; keyAtLoad = secret();
       get("guide.xml", function (e2, xml) {
         if (!e2) programmes = parseXmltv(xml);
         loaded = true;
@@ -468,15 +517,35 @@
   }
 
   // ---------- tabs ----------
+  var TABS = ["home", "guide", "settings"];
   function showTab(t) {
     tab = t;
-    $("home").className = "view" + (t === "home" ? "" : " hidden");
-    $("guide").className = "view" + (t === "guide" ? "" : " hidden");
-    $("tab-home").className = "tab f" + (t === "home" ? " sel" : "") + (focused === $("tab-home") ? " focus" : "");
-    $("tab-guide").className = "tab f" + (t === "guide" ? " sel" : "") + (focused === $("tab-guide") ? " focus" : "");
+    for (var i = 0; i < TABS.length; i++) {
+      var n = TABS[i];
+      $(n).className = "view" + (t === n ? "" : " hidden");
+      $("tab-" + n).className = "tab f" + (t === n ? " sel" : "") + (focused === $("tab-" + n) ? " focus" : "");
+    }
   }
   $("tab-home").onfocusin2 = function () { showTab("home"); };
   $("tab-guide").onfocusin2 = function () { showTab("guide"); };
+  $("tab-settings").onfocusin2 = function () { showTab("settings"); };
+
+  // ---------- settings: Playback → Stream format ----------
+  function renderSettings() {
+    var cur = formatSetting();
+    for (var k in FORMATS) if (FORMATS.hasOwnProperty(k)) {
+      var o = $("fmt-" + k);
+      o.className = "opt f" + (k === cur ? " sel" : "") + (focused === o ? " focus" : "");
+    }
+    $("s-hint").innerHTML = ""; $("s-hint").appendChild(document.createTextNode(HINTS[cur]));
+    $("s-device").innerHTML = "";
+    $("s-device").appendChild(document.createTextNode("This TV: Tizen " + (tizenVer ? tizenVer.toFixed(1) : "version unknown") +
+      " · Auto starts with " + FORMATS[preferredFormat(tizenVer)]));
+  }
+  for (var fk in FORMATS) if (FORMATS.hasOwnProperty(fk)) (function (k) {
+    $("fmt-" + k).onenter = function () { store("watchy.format", k); renderSettings(); };
+  })(fk);
+  renderSettings();
 
   // ---------- setup ----------
   function showSetup(err) {
@@ -526,11 +595,78 @@
   // (same URL, back within ~1-2 s). Retry quietly instead of showing an error.
   var BACKOFF = [0, 1000, 2000, 4000, 5000], RETRY_WINDOW = 60000, STABLE_MS = 10000;
   var attempt = 0, retryStart = 0, retryTimer = null, stableTimer = null, gen = 0;
+  // Format for the current channel (see "stream format" above).
+  var START_WINDOW = 10000;
+  var fmt = "ts", autoFmt = true, fallbackUsed = false, started = false, startedAt = 0, authTried = false, probing = false;
 
-  function resetRetries() { clearTimeout(retryTimer); clearTimeout(stableTimer); retryTimer = null; attempt = 0; }
+  function resetRetries() { clearTimeout(retryTimer); clearTimeout(stableTimer); retryTimer = null; attempt = 0; authTried = false; }
 
+  // The channel URL in the current format, with the current key (a re-auth may have changed it).
+  function urlOf(c) {
+    var k = secret(), u = c.url;
+    if (keyAtLoad && k && k !== keyAtLoad) u = u.split("/" + keyAtLoad + "/").join("/" + k + "/");
+    return streamUrl(u, fmt, k);
+  }
+
+  // AVPlay doesn't say why a stream failed, so ask the server about the manifest first:
+  // 401/403 -> re-auth; 404/5xx -> switch format (Auto) or explain (forced MPEG-TS); else retry.
   function failed(c, myGen, reason) {
-    if (myGen !== gen || !playing) return;   // stale callback: user left or changed channel
+    if (myGen !== gen || !playing || probing) return;   // stale callback: user left or changed channel
+    var early = !started || Date.now() - startedAt < START_WINDOW;
+    if (!early && !(autoFmt && !fallbackUsed && fmt === "ts")) { retryLater(c, myGen, reason); return; }
+    probing = true;
+    var x = new XMLHttpRequest(), done = false;
+    function finish(code) {
+      if (done) return;
+      done = true; probing = false;
+      if (myGen !== gen || !playing) return;
+      decide(c, myGen, reason, early, code);
+    }
+    try {
+      x.open("GET", urlOf(c), true);
+      x.timeout = 8000;
+      x.onreadystatechange = function () { if (x.readyState === 4) finish(x.status); };
+      x.ontimeout = function () { finish(0); };
+      x.send();
+    } catch (e) { finish(0); }
+  }
+
+  function decide(c, myGen, reason, early, code) {
+    if (code === 401 || code === 403) { reauth(c, myGen, reason); return; }
+    var badManifest = code === 404 || code >= 500;
+    if (autoFmt && !fallbackUsed && ((code === 404 && fmt === "ts") || (!started && badManifest) || (early && code === 200))) {
+      var from = fmt;
+      fmt = fmt === "ts" ? "fmp4" : "ts";
+      fallbackUsed = true; started = false;
+      if (attempt === 0) retryStart = Date.now();
+      attempt++;  // the switch counts as one of the retries
+      dbg("format fallback " + FORMATS[from] + " -> " + FORMATS[fmt] + " for " + channelKey(c.url) + " (" + (code === 200 ? reason : "http " + code) + ")");
+      open(c, true);
+      return;
+    }
+    // Forced MPEG-TS: index.m3u8 404s while the source has more than one audio track. Not an
+    // auth problem. Two quick retries first, since a muxer restart also 404s briefly.
+    if (!autoFmt && fmt === "ts" && code === 404 && !started && attempt >= 2) {
+      clearTimeout(retryTimer); retryTimer = null;
+      $("spinner").style.display = "none";
+      osd("This channel isn't available in MPEG-TS", "Try Auto or fMP4 in Settings → Playback  ·  press OK to retry", true);
+      return;
+    }
+    retryLater(c, myGen, reason);
+  }
+
+  // 401/403 on the stream: the existing /auth/key path, once per stable session.
+  function reauth(c, myGen, reason) {
+    if (authTried) { $("spinner").style.display = "none"; osd(c.game, "Stream unavailable · press OK to retry", true); return; }
+    authTried = true;
+    relogin(function (err, auth) {
+      if (auth) { stop(); signOut(); showSetup(err); return; }
+      if (myGen === gen && playing) retryLater(c, myGen, reason);
+    });
+  }
+
+  function retryLater(c, myGen, reason) {
+    if (myGen !== gen || !playing) return;
     clearTimeout(stableTimer);
     var now = Date.now();
     if (attempt === 0) retryStart = now;
@@ -549,11 +685,16 @@
 
   function tune() {
     resetRetries();
-    open(queue[qi], false);
+    var c = queue[qi], pick = chooseFormat(channelKey(c.url));
+    // New channel (or a manual retry): pick the format afresh.
+    fmt = pick[0]; autoFmt = formatSetting() === "auto"; fallbackUsed = false; probing = false;
+    dbg("format " + FORMATS[fmt] + " for " + channelKey(c.url) + " (" + pick[1] + ")");
+    open(c, false);
   }
 
   function open(c, retry) {
-    var myGen = ++gen;
+    var myGen = ++gen, url = urlOf(c);
+    if (!retry) started = false;
     if (!retry) {
     osd(c.game, c.provider + (queue.length > 1 ? "  ·  " + (qi + 1) + "/" + queue.length + "  ·  ▲▼ change stream" : ""), false);
     }
@@ -561,7 +702,7 @@
     if (av) {
       try { av.stop(); av.close(); } catch (e) {}
       try {
-        av.open(c.url);
+        av.open(url);
         av.setDisplayRect(0, 0, 1920, 1080);
         av.setListener({
           onbufferingstart: function () { $("spinner").style.display = ""; },
@@ -572,15 +713,20 @@
         av.prepareAsync(function () {
             if (myGen !== gen) return;
             $("spinner").style.display = "none"; av.play();
+            if (!started) {
+              started = true; startedAt = Date.now();
+              if (autoFmt) working[channelKey(c.url)] = fmt;
+              dbg("playing " + channelKey(c.url) + " as " + FORMATS[fmt]);
+            }
             clearTimeout(stableTimer);
-            stableTimer = setTimeout(function () { if (myGen === gen) attempt = 0; }, STABLE_MS);
+            stableTimer = setTimeout(function () { if (myGen === gen) { attempt = 0; authTried = false; } }, STABLE_MS);
           },
           function (e) { failed(c, myGen, "prepare failed " + ((e && e.name) || "")); });
       } catch (e) { failed(c, myGen, "open failed " + (e && e.name)); }
     } else {
       // Desktop browser preview only (Safari plays HLS natively).
       if (!video) { video = el("video"); video.style.cssText = "position:absolute;left:0;top:0;width:1920px;height:1080px;background:#000"; video.autoplay = true; $("player").insertBefore(video, $("player").firstChild); }
-      video.src = c.url;
+      video.src = url;
       video.oncanplay = function () { $("spinner").style.display = "none"; };
     }
   }
@@ -665,7 +811,8 @@
     setInterval(function () { if (!playing && scope === "app") render(false); }, 60000);
   }
 
-  window.WatchyTest = { parseM3U: parseM3U, parseXmltv: parseXmltv, buildGames: buildGames };
+  window.WatchyTest = { parseM3U: parseM3U, parseXmltv: parseXmltv, buildGames: buildGames,
+    streamUrl: streamUrl, channelKey: channelKey, preferredFormat: preferredFormat };
   if (!signedIn()) showSetup();
   else {
     start();

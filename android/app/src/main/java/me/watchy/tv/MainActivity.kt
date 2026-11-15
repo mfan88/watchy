@@ -39,6 +39,8 @@ class MainActivity : AppCompatActivity() {
             isFocusable = true
         }
         val homeTab = pill("Home")
+        val settings = pill("Settings")
+        settings.setOnClickListener { startActivity(Intent(this, SettingsActivity::class.java)) }
         val signOut = pill("Sign out")
         signOut.setOnClickListener { api.signOut(); toSetup(null) }
         val guideTab = pill("Guide")
@@ -58,6 +60,7 @@ class MainActivity : AppCompatActivity() {
             addView(guideTab)
             addView(View(this@MainActivity), lp(0, 1).apply { weight = 1f })
             addView(clock, lp().apply { marginEnd = dp(20) })
+            addView(settings, lp().apply { marginEnd = dp(6) })
             addView(signOut)
         }
         content = FrameLayout(this)

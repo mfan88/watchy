@@ -110,6 +110,12 @@ hours. The blue line marks the current time. Select any block to watch that stre
 
 The list refreshes itself every couple of minutes, so new games appear on their own.
 
+**Settings → Playback → Stream format** picks how video is fetched. Leave it on
+**Auto**: Watchy uses the format that works best on your device and switches by itself
+if a channel won't start. **fMP4** and **MPEG-TS** force one format. Some channels (for
+example some NHL Network feeds) carry more than one audio track and only play in fMP4 or
+Auto. On computers, Settings is the gear icon; on TVs it's in the top bar.
+
 **Signing out:** the **Sign out** button is at the top right on TVs; on computers it's
 the arrow-out icon.
 
@@ -140,4 +146,5 @@ You keep your sign-in through updates.
 | "Can't reach the Watchy server" | Check the device's internet connection. |
 | "No live games right now" | Games appear here about when they start. |
 | A stream says it's unavailable | Press OK/Enter to retry, or pick another stream for the same game. Streams sometimes end early or start late. |
+| "This channel isn't available in MPEG-TS" | The channel has more than one audio track. Set **Settings → Playback → Stream format** to **Auto** or **fMP4**. |
 | Video stutters | Try another stream for the same game, or use a wired connection. |

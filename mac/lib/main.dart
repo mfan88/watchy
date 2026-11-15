@@ -7,6 +7,7 @@ import 'guide.dart';
 import 'home.dart';
 import 'models.dart';
 import 'player.dart';
+import 'settings.dart';
 import 'setup.dart';
 import 'updater.dart';
 import 'ui.dart';
@@ -98,7 +99,7 @@ class _ShellState extends State<Shell> {
     final games = buildGames(_channels ?? const [], _guide);
     final queue = [for (final g in games) ...g.feeds];
     Navigator.of(context).push(PageRouteBuilder(
-      pageBuilder: (_, __, ___) => PlayerScreen(queue: queue, index: queue.indexWhere((x) => x.id == c.id).clamp(0, queue.length - 1)),
+      pageBuilder: (_, __, ___) => PlayerScreen(api: widget.api, onSignOut: widget.onSignOut, queue: queue, index: queue.indexWhere((x) => x.id == c.id).clamp(0, queue.length - 1)),
       transitionsBuilder: (_, a, __, child) => FadeTransition(opacity: a, child: child),
     ));
   }
@@ -148,6 +149,7 @@ class _ShellState extends State<Shell> {
             Text(fmtTime(DateTime.now()), style: const TextStyle(color: C.dim, fontSize: 15)),
             const SizedBox(width: 8),
             IconButton(tooltip: 'Refresh', onPressed: _load, icon: const Icon(Icons.refresh, color: C.dim, size: 20)),
+            IconButton(tooltip: 'Settings', onPressed: () => showSettings(context, widget.api.prefs), icon: const Icon(Icons.settings_outlined, color: C.dim, size: 20)),
             IconButton(tooltip: 'Sign out', onPressed: () => widget.onSignOut(null), icon: const Icon(Icons.logout, color: C.dim, size: 20)),
           ]),
         ),
