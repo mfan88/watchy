@@ -6,6 +6,10 @@ key; the app then reads the playlist and guide straight from the stream server a
 streams with Samsung's built-in AVPlay player. Plain ES5 JavaScript with no build step, so it
 runs on 2016 (Tizen 2.4) models.
 
+**Settings → Playback → Stream format**: Auto (default) / fMP4 / MPEG-TS. Auto starts with
+fMP4 on Tizen 4.0+ (2018+ TVs) and MPEG-TS on older or unknown models, and switches once if
+a channel won't start (`preferredFormat` in `js/app.js`).
+
 Remote: arrows + OK to browse, Back returns to the tabs / exits. In the player, Up/Down or
 CH+/CH− change stream, OK shows the info / retries, Play/Pause pauses, Back stops.
 

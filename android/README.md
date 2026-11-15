@@ -11,7 +11,10 @@ the login on every launch and updates itself from the latest GitHub release.
   and listed first when the feed name says so).
 - **Guide**: a TV-guide grid, one row per stream on a 3-hour time axis, with a "now" line.
 - **Player**: full-screen ExoPlayer. Up/Down (or CH+/CH−) flips streams, OK shows
-  controls, Back exits.
+  controls, Back exits. Multi-audio channels: the controls' ⚙ menu (or the remote's
+  audio-track key) picks the audio track.
+- **Settings → Playback → Stream format**: Auto (default) / fMP4 / MPEG-TS. Auto starts
+  with fMP4 and falls back to MPEG-TS once if a channel won't start (`Streams.kt`).
 
 Minimum Android 6.0 (API 23), so it runs on the Mi Box 3/3S.
 

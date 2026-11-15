@@ -1,16 +1,22 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
+import 'api.dart';
 import 'models.dart';
+import 'streams.dart';
 import 'ui.dart';
 
 /// Full-window live player. Up/Down switch streams, Space pauses, Esc goes back.
 class PlayerScreen extends StatefulWidget {
+  final Api api;
+  final ValueChanged<String?> onSignOut;
   final List<Channel> queue;
   final int index;
-  const PlayerScreen({super.key, required this.queue, required this.index});
+  const PlayerScreen({super.key, required this.api, required this.onSignOut, required this.queue, required this.index});
   @override
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
@@ -33,7 +39,25 @@ class _PlayerScreenState extends State<PlayerScreen> {
   Timer? _retry, _stable;
   final _focus = FocusNode();
 
+  // Stream format (MPEG-TS or fMP4) for the current channel; see streams.dart.
+  static const _startWindow = Duration(seconds: 10);
+  StreamFormat _format = StreamFormat.fmp4;
+  bool _auto = true, _fallbackUsed = false, _probing = false, _authTried = false;
+  DateTime? _startedAt;
+  int _gen = 0;
+  late final String _secretAtOpen = widget.api.secret;
+
   Channel get _ch => widget.queue[_i];
+
+  /// The channel's URL for the current format, with the current key (it may have been
+  /// refreshed by a re-auth since the queue was built).
+  String get _url {
+    final now = widget.api.secret;
+    final ts = _secretAtOpen.isNotEmpty && now.isNotEmpty && now != _secretAtOpen ? _ch.url.replaceFirst('/$_secretAtOpen/', '/$now/') : _ch.url;
+    return streamUrl(ts, _format, now);
+  }
+
+  void _log(String m) { if (kDebugMode) debugPrint('watchy: $m'); }
 
   @override
   void initState() {
@@ -42,19 +66,90 @@ class _PlayerScreenState extends State<PlayerScreen> {
       _player.stream.buffering.listen((v) { if (mounted) setState(() => _buffering = v); }),
       _player.stream.playing.listen((v) { if (mounted) setState(() => _playing = v); }),
       // Picture on screen: playback works, so drop any earlier (recoverable) error.
-      _player.stream.width.listen((w) { if (mounted && (w ?? 0) > 0) setState(() { _started = true; _error = null; }); }),
-      _player.stream.position.listen((p) { if (mounted && p > Duration.zero && !_started) setState(() { _started = true; _error = null; }); }),
+      _player.stream.width.listen((w) { if (mounted && (w ?? 0) > 0) _markStarted(); }),
+      _player.stream.position.listen((p) { if (mounted && p > Duration.zero && !_started) _markStarted(); }),
       // Reset the retry budget after 10 s of steady playback.
       _player.stream.playing.listen((v) {
         _stable?.cancel();
-        if (v) _stable = Timer(_stableAfter, () { _attempt = 0; _retryStart = null; });
+        if (v) _stable = Timer(_stableAfter, () { _attempt = 0; _retryStart = null; _authTried = false; });
       }),
       // mpv also reports minor errors mid-play; only act when playback has actually stalled.
-      _player.stream.error.listen((e) { if (!_started || !_playing || _buffering) _scheduleRetry('error: $e'); }),
+      _player.stream.error.listen((e) { if (!_started || !_playing || _buffering) _onFailure('error: $e'); }),
       // A live stream never ends on its own: the source dropped.
-      _player.stream.completed.listen((done) { if (done) _scheduleRetry('source ended'); }),
+      _player.stream.completed.listen((done) { if (done) _onFailure('source ended'); }),
     ]);
     _tune();
+  }
+
+  void _markStarted() {
+    final first = !_started;
+    setState(() { _started = true; _error = null; });
+    if (!first) return;
+    _startedAt = DateTime.now();
+    if (_auto) Streams.remember(channelKey(_ch.url), _format);
+    _log('playing ${channelKey(_ch.url)} as ${_format.label}');
+  }
+
+  /// mpv only reports a failure as text, so ask the server what's wrong with the
+  /// manifest before deciding: re-auth (401/403 only), switch format, or just retry.
+  void _onFailure(String reason) {
+    if (!mounted || _retry?.isActive == true || _error != null || _probing) return;
+    final early = !_started || (_startedAt != null && DateTime.now().difference(_startedAt!) < _startWindow);
+    final tsAuto = _auto && !_fallbackUsed && _format == StreamFormat.ts;
+    if (!early && !tsAuto) { _scheduleRetry(reason); return; }
+    _classify(reason, early);
+  }
+
+  Future<void> _classify(String reason, bool early) async {
+    final gen = _gen;
+    _probing = true;
+    int? code;
+    try { code = (await http.get(Uri.parse(_url)).timeout(const Duration(seconds: 8))).statusCode; } catch (_) {}
+    _probing = false;
+    if (!mounted || gen != _gen) return;
+    if (code == 401 || code == 403) { _reauth(reason); return; }
+    final badManifest = code == 404 || (code != null && code >= 500);
+    if (_auto && !_fallbackUsed &&
+        ((code == 404 && _format == StreamFormat.ts) || (!_started && badManifest) || (early && code == 200))) {
+      _fallBack(code == 200 ? reason : 'http $code');
+      return;
+    }
+    // Forced MPEG-TS: index.m3u8 404s while the source has more than one audio track
+    // (not an auth problem). Two quick retries first: a muxer restart also 404s briefly.
+    if (!_auto && _format == StreamFormat.ts && code == 404 && !_started && _attempt >= 2) {
+      _retry?.cancel();
+      setState(() { _error = "This channel isn't available in MPEG-TS · try Auto or fMP4 in Settings → Playback"; _buffering = false; });
+      return;
+    }
+    _scheduleRetry(reason);
+  }
+
+  /// Switch once to the other format. Counts as one of the retry attempts.
+  void _fallBack(String why) {
+    final from = _format;
+    _format = _format.other;
+    _fallbackUsed = true;
+    _retryStart ??= DateTime.now();
+    _attempt++;
+    _log('format fallback ${from.label} -> ${_format.label} for ${channelKey(_ch.url)} (${why.split('\n').first.replaceAll(RegExp(r'https?://\S+'), '<url>')})');
+    setState(() { _started = false; _buffering = true; });
+    _player.open(Media(_url));
+  }
+
+  /// 401/403 on the stream: the existing /auth/key path, once per stable session.
+  Future<void> _reauth(String reason) async {
+    if (_authTried) { setState(() { _error = 'Stream unavailable · press Enter to retry'; _buffering = false; }); return; }
+    _authTried = true;
+    final gen = _gen;
+    try {
+      await widget.api.refresh();
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      widget.onSignOut(e.message);
+      return;
+    } catch (_) { /* offline: keep the key and retry */ }
+    if (mounted && gen == _gen) _scheduleRetry(reason);
   }
 
   void _scheduleRetry(String reason) {
@@ -70,7 +165,8 @@ class _PlayerScreenState extends State<PlayerScreen> {
     _attempt++;
     debugPrint('watchy: auto-retry #$_attempt in ${wait}ms (${reason.split('\n').first.replaceAll(RegExp(r'https?://\S+'), '<url>')})');
     setState(() => _buffering = true);
-    _retry = Timer(Duration(milliseconds: wait), () { if (mounted) _player.open(Media(_ch.url)); });
+    // Same channel, same (currently working) format.
+    _retry = Timer(Duration(milliseconds: wait), () { if (mounted) _player.open(Media(_url)); });
   }
 
   void _resetRetries() { _retry?.cancel(); _stable?.cancel(); _attempt = 0; _retryStart = null; }
@@ -87,9 +183,19 @@ class _PlayerScreenState extends State<PlayerScreen> {
 
   Future<void> _tune() async {
     _resetRetries();
+    _gen++;
+    _authTried = false;
+    _probing = false;
+    // New channel (or a manual retry): pick the format afresh.
+    final (f, why) = Streams.choose(widget.api.prefs, channelKey(_ch.url));
+    _format = f;
+    _auto = Streams.setting(widget.api.prefs) == StreamFormat.auto;
+    _fallbackUsed = false;
+    _startedAt = null;
+    _log('format ${f.label} for ${channelKey(_ch.url)} ($why)');
     setState(() { _error = null; _started = false; _buffering = true; });
     _showOsd();
-    await _player.open(Media(_ch.url));
+    await _player.open(Media(_url));
   }
 
   void _showOsd() {

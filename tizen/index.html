@@ -12,7 +12,7 @@
 <div id="app">
   <div id="bar">
     <div class="wordmark">watchy</div>
-    <div id="tabs"><div class="tab f" id="tab-home" data-key="tab-home">Home</div><div class="tab f" id="tab-guide" data-key="tab-guide">Guide</div></div>
+    <div id="tabs"><div class="tab f" id="tab-home" data-key="tab-home">Home</div><div class="tab f" id="tab-guide" data-key="tab-guide">Guide</div><div class="tab f" id="tab-settings" data-key="tab-settings">Settings</div></div>
     <div class="tab f" id="signout" data-key="signout">Sign out</div>
     <div id="clock"></div>
   </div>
@@ -22,6 +22,13 @@
     <div id="g-head"><div class="g-label-head">Today</div><div id="g-times"></div></div>
     <div id="g-body"><div id="g-rows"></div></div>
     <div class="empty" id="guide-empty"></div>
+  </div>
+  <div id="settings" class="view hidden">
+    <div class="s-sec">PLAYBACK</div>
+    <div class="s-label">Stream format</div>
+    <div id="s-formats"><div class="opt f" id="fmt-auto" data-key="fmt-auto">Auto</div><div class="opt f" id="fmt-fmp4" data-key="fmt-fmp4">fMP4</div><div class="opt f" id="fmt-ts" data-key="fmt-ts">MPEG-TS</div></div>
+    <div id="s-hint" class="dim"></div>
+    <div id="s-device"></div>
   </div>
 </div>
 <div id="setup" class="hidden">

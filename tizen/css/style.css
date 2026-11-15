@@ -83,6 +83,16 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .nowline { position: absolute; top: 0; width: 3px; opacity: .85; height: 100%; background: #4C8DFF; z-index: 3; }
 .prog.focus ~ .nowline { opacity: .5; }
 
+/* settings */
+#settings { left: 96px; right: 96px; top: 180px; }
+.s-sec { font-size: 24px; letter-spacing: 3px; color: #5F6978; font-weight: 500; margin-bottom: 24px; }
+.s-label { font-family: "DM Sans", "IBM Plex Sans", sans-serif; font-size: 40px; font-weight: 600; margin-bottom: 24px; }
+.opt { display: inline-block; margin-right: 16px; height: 72px; line-height: 72px; padding: 0 44px; border-radius: 36px; background: #151A22; font-size: 32px; font-weight: 500; color: #9AA4B2; }
+.opt.sel { background: #1E2530; color: #F2F4F8; }
+.opt.focus { background: #F2F4F8; color: #0B0E13; }
+#s-hint { font-size: 30px; margin-top: 28px; }
+#s-device { font-size: 26px; color: #5F6978; margin-top: 16px; }
+
 /* setup */
 #setup { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0B0E13; }
 #setup .panel { position: absolute; left: 560px; top: 250px; width: 800px; padding: 72px 80px; border-radius: 40px; background: #151A22; border: 2px solid #2A3240; text-align: center; }

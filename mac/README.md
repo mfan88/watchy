@@ -7,6 +7,10 @@ Video plays through `media_kit` (libmpv) on all three platforms. Installs from t
 DMG, the Windows installer and the AppImage update themselves from the latest GitHub release
 (`lib/updater.dart`).
 
+Stream format (gear icon → Playback): Auto (default) / fMP4 / MPEG-TS. Auto starts with
+fMP4, since libmpv plays it on all three platforms, and falls back to MPEG-TS once if a
+channel won't start (`lib/streams.dart`).
+
 Player keys: ↑/↓ change stream, Space pause, Enter retry, Esc back. Clicking a stream chip
 at the bottom switches between feeds of the same game.
 
